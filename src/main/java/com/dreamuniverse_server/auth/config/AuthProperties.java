@@ -13,5 +13,6 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 public record AuthProperties(@NotNull @Valid Google google, @NotNull @Valid Token token) {
     public record Google(@NotBlank String clientId) {}
     public record Token(@NotBlank String secret, @DefaultValue("900") @Positive long ttlSeconds,
-                        @DefaultValue("2592000") @Positive long refreshTtlSeconds) {}
+                        @DefaultValue("2592000") @Positive long refreshTtlSeconds,
+                        @DefaultValue("600") @Positive long signupTtlSeconds) {}
 }

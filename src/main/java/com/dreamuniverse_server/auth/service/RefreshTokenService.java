@@ -25,7 +25,12 @@ public class RefreshTokenService {
     private final AuthProperties authProperties;
     private final UserService userService;
 
+    public void revokeAllForUser(Long userId) {
+        refreshSessionRepository.revokeAllByUserId(userId, Instant.now());
+    }
+
     public TokenResponse create(Long userId) {
+        userService.getProfile(userId);
         Instant now = Instant.now();
         var session = refreshSessionRepository.save(RefreshSession.create(userId,
                 now.plusSeconds(authProperties.token().refreshTtlSeconds())));

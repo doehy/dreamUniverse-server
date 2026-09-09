@@ -50,6 +50,7 @@ public class AuthConfig {
         var decoder = NimbusJwtDecoder.withSecretKey(tokenKey).macAlgorithm(MacAlgorithm.HS256).build();
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
                 TokenValidators.forAudienceAndIssuers(AUDIENCE, Set.of(ISSUER)),
+                new JwtClaimValidator<String>("token_use", "access"::equals),
                 new JwtClaimValidator<String>("sub", TokenValidators::isUserId)));
         return decoder;
     }
@@ -63,7 +64,7 @@ public class AuthConfig {
                 .requestCache(cache -> cache.disable())
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/google", "/api/auth/refresh", "/api/auth/logout").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/google", "/api/auth/signup", "/api/auth/refresh", "/api/auth/logout").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(resource -> resource.jwt(jwt -> jwt.decoder(decoder)))
                 .build();

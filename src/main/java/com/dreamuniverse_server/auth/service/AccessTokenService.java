@@ -23,7 +23,7 @@ public class AccessTokenService {
         Instant now = Instant.now();
         var claims = new JWTClaimsSet.Builder()
                 .issuer(AuthConfig.ISSUER).audience(AuthConfig.AUDIENCE)
-                .subject(userId.toString()).jwtID(UUID.randomUUID().toString())
+                .claim("token_use", "access").subject(userId.toString()).jwtID(UUID.randomUUID().toString())
                 .issueTime(Date.from(now)).expirationTime(Date.from(now.plusSeconds(ttlSeconds))).build();
         var jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.HS256).type(JOSEObjectType.JWT).build(), claims);
         try {

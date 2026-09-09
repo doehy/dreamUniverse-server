@@ -1,7 +1,6 @@
 package com.dreamuniverse_server.auth.service;
 
-import com.dreamuniverse_server.auth.dto.response.TokenResponse;
-import com.dreamuniverse_server.user.service.UserService;
+import com.dreamuniverse_server.auth.dto.response.LoginResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -9,13 +8,9 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AuthService {
     private final GoogleAuthService googleAuthService;
-    private final UserService userService;
-    private final RefreshTokenService refreshTokenService;
+    private final SignupService signupService;
 
-    public TokenResponse login(String idToken) {
-        var identity = googleAuthService.verify(idToken);
-        Long userId = userService.registerOAuthUser(
-                identity.provider(), identity.providerUserId(), identity.email(), identity.name());
-        return refreshTokenService.create(userId);
+    public LoginResponse login(String idToken) {
+        return signupService.begin(googleAuthService.verify(idToken));
     }
 }

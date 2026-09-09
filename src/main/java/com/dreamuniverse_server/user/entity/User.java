@@ -2,6 +2,8 @@ package com.dreamuniverse_server.user.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.Instant;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "users", uniqueConstraints = @UniqueConstraint(
@@ -25,4 +27,31 @@ public class User {
 
     @Column(length = 255)
     private String name;
+
+    // Nullable for legacy users; only completed signups may receive service tokens.
+    @Column(length = 30)
+    private String nickname;
+    private LocalDate birthDate;
+    private Instant termsOfServiceAgreedAt;
+    private Instant privacyPolicyAgreedAt;
+    private Instant signupCompletedAt;
+
+    public static User create(OAuthProvider provider, String providerUserId) {
+        var user = new User();
+        user.provider = provider;
+        user.providerUserId = providerUserId;
+        return user;
+    }
+
+    public boolean isSignupCompleted() { return signupCompletedAt != null; }
+
+    public void completeSignup(String email, String name, String nickname, LocalDate birthDate, Instant now) {
+        this.email = email;
+        this.name = name;
+        this.nickname = nickname;
+        this.birthDate = birthDate;
+        this.termsOfServiceAgreedAt = now;
+        this.privacyPolicyAgreedAt = now;
+        this.signupCompletedAt = now;
+    }
 }

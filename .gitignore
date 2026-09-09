@@ -42,3 +42,7 @@ README.md
 application.yml.example
 docs/
 AGENTS.md
+
+.DS_Store
+src/.DS_Store
+src/main/.DS_Store
