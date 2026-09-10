@@ -25,8 +25,14 @@ public class AuthController {
 
     /** Android에서 받은 Google ID 토큰으로 로그인하고 서비스 토큰 쌍을 발급합니다. */
     @PostMapping("/google")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody GoogleLoginRequest request) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(authService.login(request.idToken()));
+    public ResponseEntity<LoginResponse> loginGoogle(@Valid @RequestBody GoogleLoginRequest request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(authService.loginGoogle(request.idToken()));
+    }
+
+    /** Android 카카오 SDK에서 받은 액세스 토큰을 검증하고 로그인/가입을 분기합니다. */
+    @PostMapping("/kakao")
+    public ResponseEntity<LoginResponse> loginKakao(@Valid @RequestBody KakaoLoginRequest request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(authService.loginKakao(request.accessToken()));
     }
 
     /** 신규 사용자의 필수 정보를 저장하고 가입용 토큰을 한 번만 소비합니다. */

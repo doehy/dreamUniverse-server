@@ -2,14 +2,14 @@
 
 ## 모듈 구조
 
-하나의 Spring Boot 애플리케이션 안에서 기능별 패키지로 모듈을 구분합니다. `auth`는 Google 인증과 토큰/세션을, `user`는 회원 식별과 개인정보 저장을 담당합니다. `auth`는 `UserService`와 `UserProfile`을 통해 회원 모듈을 사용하며 회원 저장소·엔티티를 직접 참조하지 않습니다. Gradle 하위 프로젝트나 Spring Modulith로 경계를 강제하지는 않습니다.
+하나의 Spring Boot 애플리케이션 안에서 기능별 패키지로 모듈을 구분합니다. `auth`는 Google·카카오 인증과 토큰/세션을, `user`는 회원 식별과 개인정보 저장을 담당합니다. `auth`는 `UserService`와 `UserProfile`을 통해 회원 모듈을 사용하며 회원 저장소·엔티티를 직접 참조하지 않습니다. Gradle 하위 프로젝트나 Spring Modulith로 경계를 강제하지는 않습니다.
 
 ```text
 com.dreamuniverse_server
 ├── auth
 │   ├── controller        # AuthController (로그인 분기·가입·갱신·로그아웃)
-│   ├── service           # AuthService, GoogleAuthService, SignupService, AccessTokenService, RefreshTokenService
-│   ├── dto/request       # GoogleLoginRequest, SignupRequest, RefreshTokenRequest
+│   ├── service           # AuthService, GoogleAuthService, KakaoAuthService, SignupService, AccessTokenService, RefreshTokenService
+│   ├── dto/request       # GoogleLoginRequest, KakaoLoginRequest, SignupRequest, RefreshTokenRequest
 │   ├── dto/response      # LoginResponse, TokenResponse, UserInfo (제공자 공통 인증 결과를 내부에서 전달)
 │   ├── entity            # RefreshSession, RefreshToken, SignupSession
 │   ├── repository        # 로그인 세션/리프레시 토큰 저장소
@@ -33,6 +33,7 @@ IntelliJ Run → Edit Configurations → Environment variables에 설정합니�
 | 환경변수 | 값 |
 | --- | --- |
 | `GOOGLE_CLIENT_ID` | Google Cloud의 **DreamUniverse Server (웹 애플리케이션)** 전체 클라이언트 ID |
+| `KAKAO_APP_ID` | 카카오디벨로퍼스의 숫자 앱 ID. Android SDK에서 사용하는 카카오 앱과 같아야 함 |
 | `JWT_SECRET` | 최소 32바이트의 랜덤 값을 Base64로 인코딩한 서비스 토큰 서명키 |
 | `DB_USERNAME`, `DB_PASSWORD` | 예제 설정에서 사용하는 MySQL 계정 |
 | `DB_URL` | 예제 설정의 선택값. 기본 `jdbc:mysql://localhost:3306/dreamuniverse` |
@@ -44,6 +45,8 @@ app:
   auth:
     google:
       client-id: ${GOOGLE_CLIENT_ID}
+    kakao:
+      app-id: ${KAKAO_APP_ID:}
     token:
       secret: ${JWT_SECRET}
       ttl-seconds: 900
@@ -80,13 +83,13 @@ app:
 
 기존 DB의 전체 적용 순서는 필요한 단계만 골라 **`migrate-auth-ids-to-bigint.sql` → `rename-member-to-user.sql` → `migrate-refresh-token-pk-to-identity.sql`**입니다. 앞의 스크립트는 당시 스키마를 유지하며 마지막 단계에서 리프레시 토큰 PK를 바꿉니다. 모든 쓰기 작업 중지와 백업 후 적용하며 `ddl-auto: update`에 PK 전환을 맡기지 않습니다. 신규 DB는 최신 `auth-schema.sql`만 사용합니다.
 
-사용자는 `(provider, provider_user_id)`로 구분하고 이메일만으로 계정을 합치지 않습니다. Google의 이름·이메일은 가입 세션에서 보관하다가 가입 완료 시 회원 DB에 저장합니다. 일반 로그인에서는 닉네임과 회원 정보를 덮어쓰지 않습니다. 사진은 저장하지 않습니다.
+사용자는 `(provider, provider_user_id)`로 구분하고 이메일만으로 계정을 합치지 않습니다. 제공자 표시 이름·이메일은 가입 세션에서 보관하다가 가입 완료 시 회원 DB에 저장합니다. 일반 로그인에서는 닉네임과 회원 정보를 덮어쓰지 않습니다. 사진은 저장하지 않습니다.
 
 ## OAuth 제공자별 사용자 식별
 
 `User`는 `provider`(`OAuthProvider.GOOGLE`, `OAuthProvider.KAKAO`)와 `providerUserId`로 외부 계정을 식별합니다. DB에서는 `(provider, provider_user_id)` 조합에만 고유 제약을 둡니다. 예를 들어 `GOOGLE/123`과 `KAKAO/123`은 서로 다른 사용자입니다. 동일 이메일로도 자동 병합하지 않으며 사용자당 로그인 제공자는 하나입니다.
 
-제공자별 검증 서비스는 `UserInfo(provider, providerUserId, email, name)`이라는 공통 결과를 반환합니다. 현재 `GoogleAuthService`는 검증한 Google subject를 `providerUserId`로, 제공자를 `GOOGLE`로 설정합니다. `AuthService`는 이 검증 결과를 `SignupService`에 전달하여 가입 완료 사용자 여부를 확인합니다. 제공자 값은 클라이언트 요청에서 받아 신뢰하지 않고 검증 서비스가 결정합니다. 카카오 로그인 API와 토큰 검증은 아직 구현하지 않았고, 이메일 필수 조건 등 제공자별 입력 정책은 카카오 연동 시 결정합니다.
+제공자별 검증 서비스는 `UserInfo(provider, providerUserId, email, name)`이라는 공통 결과를 반환합니다. 현재 `GoogleAuthService`는 검증한 Google subject를 `providerUserId`로, 제공자를 `GOOGLE`로 설정합니다. `AuthService`는 이 검증 결과를 `SignupService`에 전달하여 가입 완료 사용자 여부를 확인합니다. 제공자 값은 클라이언트 요청에서 받아 신뢰하지 않고 검증 서비스가 결정합니다. 카카오는 `KakaoAuthService`에서 앱 ID·토큰 유효성·사용자 ID·이메일 유효성 및 인증 여부를 확인한 후 `KAKAO`와 카카오 회원번호를 전달합니다. 가입 필수값인 이메일을 받지 못하면 로그인 단계에서 403을 반환합니다.
 
 기존 `users.google_subject` 스키마는 재실행 전에 `docs/migrate-users-oauth-provider.sql`을 적용해야 합니다. 이전에 필요한 ID/명칭/토큰 PK 마이그레이션을 먼저 적용한 후 이 스크립트를 마지막으로 실행합니다. 기존 계정은 `provider = GOOGLE`로 채우고 `google_subject`를 `provider_user_id`로 바꾸며 이전 단일 고유 인덱스를 제거합니다. 사용자 ID·리프레시 세션은 유지됩니다. 모든 쓰기 작업을 중지하고 백업 후 적용하며, 실제 DB에 자동 실행되지 않습니다. 새 DB는 최신 `auth-schema.sql`만 사용합니다. `ddl-auto: update`로 기존 열의 이름 변경과 값 이관을 대신하지 않습니다.
 
@@ -101,7 +104,7 @@ app:
 
 Google 클라이언트 시크릿이나 백엔드 리다이렉트 URI는 필요하지 않습니다. 서비스 리프레시 토큰은 우리 서버가 발급하며 Google API 접근용 리프레시 토큰과 다릅니다. 배포 환경에서는 HTTPS를 사용합니다.
 
-로그인·가입 완료·갱신·로그아웃에는 **Authorization 헤더를 보내지 않습니다**. 만료된 액세스 토큰을 붙이면 Spring Security가 먼저 `401`을 반환할 수 있습니다. Android 공통 인터셉터에서 이 네 경로를 제외하세요.
+로그인·가입 완료·갱신·로그아웃에는 **Authorization 헤더를 보내지 않습니다**. 만료된 액세스 토큰을 붙이면 Spring Security가 먼저 `401`을 반환할 수 있습니다. Android 공통 인터셉터에서 `/api/auth/google`, `/api/auth/kakao`, `/api/auth/signup`, `/api/auth/refresh`, `/api/auth/logout`을 제외하세요.
 
 앱에서 동시에 여러 요청이 `401`을 받아도 **갱신은 한 번만 실행**하고 나머지는 그 결과를 기다려야 합니다. 이미 소비한 리프레시 토큰으로 재시도하면 세션이 폐기됩니다. 갱신 응답을 네트워크 문제로 잃어버린 경우에도 이전 토큰을 다시 사용하면 재로그인이 필요할 수 있습니다. 갱신의 `401`은 재로그인으로 처리하고 네트워크 오류/서버 `5xx`를 곧바로 로그아웃으로 취급하지 않습니다. 리프레시 토큰은 요청 로그에 남기지 않고 앱의 보호된 저장소에 보관합니다.
 
@@ -146,9 +149,47 @@ Google 검증 성공 후 `200`으로 기존 사용자/가입 필요 여부를 �
 }
 ```
 
-이 단계에서는 신규 `users` 행과 서비스 토큰을 만들지 않습니다. 가입용 토큰은 32바이트 난수의 43자리 Base64URL 문자열이며 DB에는 해시만 저장합니다. 일반 API/리프레시 API에 사용할 수 없습니다. 동일 계정으로 Google 인증을 다시 받으면 이전 가입용 토큰은 대체되어 사용할 수 없습니다.
+이 단계에서는 신규 `users` 행과 서비스 토큰을 만들지 않습니다. 가입용 토큰은 32바이트 난수의 43자리 Base64URL 문자열이며 DB에는 해시만 저장합니다. 일반 API/리프레시 API에 사용할 수 없습니다. 동일 계정으로 소셜 인증을 다시 받으면 이전 가입용 토큰은 대체되어 사용할 수 없습니다.
 
 `400`: 잘못된 요청, `401`: Google 인증 실패, `503`: 검증 인프라 일시 오류.
+
+### POST /api/auth/kakao
+
+Android 카카오 SDK 로그인 성공으로 받은 **카카오 액세스 토큰**을 보냅니다. Google ID 토큰, 카카오 ID 토큰, 인가 코드, 서비스 액세스 토큰을 보내는 API가 아닙니다. Authorization 헤더는 붙이지 않습니다.
+
+```json
+{"accessToken":"KAKAO_ACCESS_TOKEN"}
+```
+
+서버는 고정된 카카오 HTTPS API에만 요청합니다.
+
+1. `/v1/user/access_token_info`에서 유효기간과 숫자 `app_id`를 확인합니다. `KAKAO_APP_ID`와 다르면 거부합니다.
+2. `/v2/user/me`에서 회원번호가 앞의 조회와 같은지 확인하고 이메일·닉네임 정보만 요청합니다. 프로필 사진 필드는 저장하지 않습니다.
+3. `is_email_valid`, `is_email_verified`가 모두 true이고 이메일이 있어야 공통 가입/로그인 흐름으로 진행합니다.
+4. 기존 가입 완료 사용자는 `LOGIN_SUCCESS`, 신규 또는 가입 미완료 사용자는 `SIGNUP_REQUIRED`를 반환합니다. 응답 JSON 구조와 가입 완료 API는 Google과 동일합니다.
+
+| HTTP | 의미 | Android 처리 |
+| --- | --- | --- |
+| 200 | 로그인 성공 또는 가입 필요 | `status`로 분기 |
+| 400 | 빈 토큰·길이 초과·잘못된 형식/JSON | 요청 확인 |
+| 401 | 카카오 토큰 만료/무효, 다른 앱의 토큰, 사용자 ID 불일치 | 카카오 인증 다시 진행 |
+| 403 | 이메일 미제공·미인증·유효하지 않음 | 이메일 동의/계정 인증 확인 후 다시 진행 |
+| 503 | 앱 ID 미설정, 카카오 통신·응답·요청 제한 등 검증 인프라 오류 | 설정 확인 또는 잠시 후 재시도 |
+
+각 카카오 요청의 연결 제한은 3초, 읽기 제한은 5초입니다. 카카오 액세스 토큰은 서버 DB에 저장하지 않습니다. 우리 서버의 리프레시 토큰과 카카오 SDK의 토큰은 별개입니다. `/logout`은 서비스 세션만 폐기하며 카카오 계정 로그아웃/연결 해제는 수행하지 않습니다.
+
+#### 카카오 콘솔·Android 준비
+
+- 카카오 로그인을 활성화하고 Android 패키지명·키 해시를 등록합니다.
+- Android SDK에는 해당 앱의 네이티브 앱 키를 사용하고, 서버 `KAKAO_APP_ID`에는 **같은 앱의 숫자 ID**를 설정합니다. REST API 키나 네이티브 앱 키 문자열을 앱 ID에 넣지 않습니다.
+- 카카오계정 이메일(`account_email`) 동의항목을 사용하도록 설정합니다. 앱에서 받을 수 있는 이메일 권한은 콘솔에서 확인해야 합니다. 이메일 제공을 받을 수 없다면 현재 필수 이메일 가입 정책으로 진행할 수 없습니다.
+- 닉네임(`profile_nickname`)은 선택 사항입니다. 카카오 닉네임과 무관하게 가입 화면에서 서비스 닉네임을 별도로 받습니다. 프로필 사진 동의는 필요하지 않습니다.
+- SDK 로그인 후 받은 `accessToken`을 위 API에 전달합니다. 이메일 추가 동의가 가능하면 Android에서 추가 동의 후 새 토큰으로 다시 요청합니다. 이메일 미인증은 동의만으로 해결되지 않으므로 카카오계정 이메일 상태를 확인해야 합니다.
+- 이 서버 API는 Android SDK 토큰 검증 방식이므로 서버용 인가 코드 콜백, REST API 키, 클라이언트 시크릿을 사용하지 않습니다. SDK에 필요한 앱 복귀 설정은 Android에서 적용합니다.
+
+`KAKAO_APP_ID`가 없어도 기존 Google 로그인은 사용할 수 있고, 카카오 API만 503을 반환합니다. 기존 `(provider, provider_user_id)` 스키마의 `KAKAO` 값을 사용하므로 이번 변경의 추가 DB 마이그레이션은 없습니다.
+
+카카오 관련 필드/검증 기준: [카카오 로그인 REST API 공식 문서](https://developers.kakao.com/docs/ko/kakaologin/rest-api).
 
 ### POST /api/auth/signup
 
@@ -162,7 +203,7 @@ Google 검증 성공 후 `200`으로 기존 사용자/가입 필요 여부를 �
 }
 ```
 
-이메일은 Google에서 검증한 `signup.email`을 화면에 보여주고 서버의 가입 세션 값으로 저장합니다. 클라이언트에서 이메일·provider·providerUserId를 입력받아 덮어쓰지 않습니다. 따라서 가입 요청에 이메일 필드는 없습니다. Google 이름은 닉네임과 별도로 저장합니다.
+이메일은 Google 또는 카카오에서 검증한 `signup.email`을 화면에 보여주고 서버의 가입 세션 값으로 저장합니다. 클라이언트에서 이메일·provider·providerUserId를 입력받아 덮어쓰지 않습니다. 따라서 가입 요청에 이메일 필드는 없습니다. `name`은 제공자 표시 이름이며 서비스 닉네임과 별도로 저장합니다. 카카오에서는 동의받아 제공된 프로필 닉네임을 표시 이름으로 사용하고, 없으면 null입니다.
 
 닉네임은 앞뒤 공백 제거 후 1~30자이며 현재 중복은 허용합니다. 생년월일은 필수 `YYYY-MM-DD` 날짜이며 미래 날짜를 거부합니다. 별도의 최소 연령 제한은 정하지 않았습니다. 서비스 이용약관과 개인정보 처리방침 동의는 둘 다 필수 Boolean이며 누락/null/false를 거부합니다. 동의 시각 두 개와 가입 완료 시각을 서버 시간으로 저장합니다. 약관 본문·버전은 아직 제공되지 않아 버전별 동의 이력은 포함하지 않았습니다.
 
@@ -180,9 +221,9 @@ Google 검증 성공 후 `200`으로 기존 사용자/가입 필요 여부를 �
 
 - `400`: 필수 정보 누락, 닉네임 길이 초과/공백, 잘못된 날짜/미래 날짜, 동의하지 않은 항목
 - `401`: 잘못된·만료된·이미 소비한 가입용 토큰
-- `409`: 이미 가입을 완료한 계정. 다시 Google 로그인으로 기존 사용자 흐름 진행
+- `409`: 이미 가입을 완료한 계정. 같은 제공자로 다시 로그인하여 기존 사용자 흐름 진행
 
-가입 세션 행을 잠근 뒤 회원 저장·가입 토큰 소비·서비스 토큰 발급을 하나의 트랜잭션으로 처리합니다. 동시에 같은 가입 토큰을 제출해도 성공한 요청 이후에는 재사용할 수 없습니다. 실패해 롤백되면 토큰 소비와 회원 저장도 함께 취소됩니다. 응답을 잃어버려 재사용이 거부되면 Google 로그인을 다시 호출하면 됩니다.
+가입 세션 행을 잠근 뒤 회원 저장·가입 토큰 소비·서비스 토큰 발급을 하나의 트랜잭션으로 처리합니다. 동시에 같은 가입 토큰을 제출해도 성공한 요청 이후에는 재사용할 수 없습니다. 실패해 롤백되면 토큰 소비와 회원 저장도 함께 취소됩니다. 응답을 잃어버려 재사용이 거부되면 같은 제공자의 로그인 API를 다시 호출하면 됩니다.
 
 ### POST /api/auth/refresh
 
@@ -242,6 +283,6 @@ Google 검증 성공 후 `200`으로 기존 사용자/가입 필요 여부를 �
 
 ## 확인 범위
 
-MVP 요청에 따라 테스트 코드는 추가하거나 실행하지 않습니다. 컴파일을 확인했으며 실제 Google/Android 로그인과 MySQL의 회원 등록·갱신·재사용 탐지 동작은 별도 연동 확인이 필요합니다.
+MVP 요청에 따라 테스트 코드는 추가하거나 실행하지 않습니다. 컴파일을 확인했으며 실제 Google·카카오 계정/Android 로그인과 MySQL의 회원 등록·갱신·재사용 탐지 동작은 별도 연동 확인이 필요합니다.
 
 참고: [Google 서버 인증](https://developers.google.com/identity/sign-in/android/backend-auth), [OAuth 리프레시 토큰 보안 권고](https://www.rfc-editor.org/rfc/rfc9700.html#section-4.14).

@@ -10,7 +10,9 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @Validated
 @ConfigurationProperties("app.auth")
-public record AuthProperties(@NotNull @Valid Google google, @NotNull @Valid Token token) {
+public record AuthProperties(@NotNull @Valid Google google, @NotNull @Valid Token token,
+                             @DefaultValue @Valid Kakao kakao) {
+    public record Kakao(@Positive Long appId) {}
     public record Google(@NotBlank String clientId) {}
     public record Token(@NotBlank String secret, @DefaultValue("900") @Positive long ttlSeconds,
                         @DefaultValue("2592000") @Positive long refreshTtlSeconds,

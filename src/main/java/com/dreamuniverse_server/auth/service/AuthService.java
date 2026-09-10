@@ -8,9 +8,14 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AuthService {
     private final GoogleAuthService googleAuthService;
+    private final KakaoAuthService kakaoAuthService;
     private final SignupService signupService;
 
-    public LoginResponse login(String idToken) {
+    public LoginResponse loginGoogle(String idToken) {
         return signupService.begin(googleAuthService.verify(idToken));
+    }
+
+    public LoginResponse loginKakao(String accessToken) {
+        return signupService.begin(kakaoAuthService.verify(accessToken));
     }
 }
