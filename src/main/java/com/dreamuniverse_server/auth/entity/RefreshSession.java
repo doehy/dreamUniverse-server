@@ -1,5 +1,6 @@
 package com.dreamuniverse_server.auth.entity;
 
+import com.dreamuniverse_server.global.entity.BaseCreatedEntity;
 import jakarta.persistence.*;
 import java.time.Instant;
 import lombok.*;
@@ -8,7 +9,7 @@ import lombok.*;
 @Table(name = "auth_refresh_sessions", indexes = @Index(name = "idx_refresh_session_expiry", columnList = "expires_at"))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class RefreshSession {
+public class RefreshSession extends BaseCreatedEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

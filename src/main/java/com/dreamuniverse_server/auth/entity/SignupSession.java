@@ -1,5 +1,6 @@
 package com.dreamuniverse_server.auth.entity;
 
+import com.dreamuniverse_server.global.entity.BaseCreatedEntity;
 import com.dreamuniverse_server.user.entity.OAuthProvider;
 import jakarta.persistence.*;
 import java.time.Instant;
@@ -11,7 +12,7 @@ import lombok.*;
         @UniqueConstraint(name = "uk_signup_token_hash", columnNames = "token_hash")})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class SignupSession {
+public class SignupSession extends BaseCreatedEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

@@ -1,5 +1,6 @@
 package com.dreamuniverse_server.user.entity;
 
+import com.dreamuniverse_server.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.Instant;
@@ -10,7 +11,7 @@ import java.time.LocalDate;
         name = "uk_users_provider_user_id", columnNames = {"provider", "provider_user_id"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class User {
+public class User extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

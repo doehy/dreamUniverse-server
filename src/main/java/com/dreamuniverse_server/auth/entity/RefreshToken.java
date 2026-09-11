@@ -1,5 +1,6 @@
 package com.dreamuniverse_server.auth.entity;
 
+import com.dreamuniverse_server.global.entity.BaseCreatedEntity;
 import jakarta.persistence.*;
 import java.time.Instant;
 import lombok.*;
@@ -10,7 +11,7 @@ import lombok.*;
         indexes = @Index(name = "idx_refresh_token_session", columnList = "session_id"))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class RefreshToken {
+public class RefreshToken extends BaseCreatedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
