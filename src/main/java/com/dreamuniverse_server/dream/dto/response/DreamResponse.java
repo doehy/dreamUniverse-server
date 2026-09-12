@@ -1,0 +1,27 @@
+package com.dreamuniverse_server.dream.dto.response;
+
+import com.dreamuniverse_server.dream.entity.Dream;
+
+import java.time.Instant;
+import java.time.LocalDate;
+
+public record DreamResponse(
+
+        Long dreamId,
+        String content,
+        LocalDate dreamDate,
+        Instant createdAt,
+        Instant updatedAt
+
+) {
+
+    public static DreamResponse from(Dream dream) {
+        return new DreamResponse(
+                dream.getId(),
+                dream.getContent(),
+                dream.getDreamDate(),
+                dream.getCreatedAt(),
+                dream.getUpdatedAt()
+        );
+    }
+}
