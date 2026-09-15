@@ -2,17 +2,27 @@ package com.dreamuniverse_server.dream.dto.ai;
 
 import com.dreamuniverse_server.dream.entity.DreamElementType;
 import com.dreamuniverse_server.dream.entity.DreamEmotionType;
+import lombok.Getter;
 
 import java.util.List;
 
-public record DreamAnalysisResult(
-        String summary,
-        String interpretation,
-        List<EmotionResult> emotions,
-        List<ElementResult> elements
-) {
+@Getter
+public class DreamAnalysisResult {
 
-    public record EmotionResult(DreamEmotionType type, int score) { }
+    private String summary;
+    private String interpretation;
+    private List<EmotionResult> emotions;
+    private List<ElementResult> elements;
 
-    public record ElementResult(DreamElementType type, String value) { }
+    @Getter
+    public static class EmotionResult {
+        private DreamEmotionType type;
+        private int score;
+    }
+
+    @Getter
+    public static class ElementResult {
+        private DreamElementType type;
+        private String value;
+    }
 }

@@ -27,8 +27,8 @@ public class DreamAnalysisService {
         DreamAnalysis analysis = dreamAnalysisRepository.findByDreamId(dream.getId())
                 .map(existing -> {
                     existing.update(
-                            result.summary(),
-                            result.interpretation()
+                            result.getSummary(),
+                            result.getInterpretation()
                     );
                     return existing;
                 })
@@ -36,8 +36,8 @@ public class DreamAnalysisService {
                         dreamAnalysisRepository.save(
                                 DreamAnalysis.create(
                                         dream,
-                                        result.summary(),
-                                        result.interpretation()
+                                        result.getSummary(),
+                                        result.getInterpretation()
                                 )
                         )
                 );
@@ -45,26 +45,26 @@ public class DreamAnalysisService {
         dreamEmotionRepository.deleteAllByAnalysisId(analysis.getId());
         dreamElementRepository.deleteAllByAnalysisId(analysis.getId());
 
-        List<DreamEmotion> emotions = result.emotions()
+        List<DreamEmotion> emotions = result.getEmotions()
                 .stream()
                 .map(emotion ->
                         DreamEmotion.create(
                                 analysis,
-                                emotion.type(),
-                                emotion.score()
+                                emotion.getType(),
+                                emotion.getScore()
                         )
                 )
                 .toList();
 
         dreamEmotionRepository.saveAll(emotions);
 
-        List<DreamElement> elements = result.elements()
+        List<DreamElement> elements = result.getElements()
                 .stream()
                 .map(element ->
                         DreamElement.create(
                                 analysis,
-                                element.type(),
-                                element.value()
+                                element.getType(),
+                                element.getValue()
                         )
                 )
                 .toList();
