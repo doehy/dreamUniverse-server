@@ -4,7 +4,6 @@ import com.dreamuniverse_server.dream.entity.DreamAiUsage;
 import com.dreamuniverse_server.dream.repository.DreamAiUsageRepository;
 import com.dreamuniverse_server.global.exception.CustomException;
 import com.dreamuniverse_server.global.exception.ErrorCode;
-import com.dreamuniverse_server.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,7 +12,6 @@ import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class DreamAiUsageService {
 
     private static final int FREE_DAILY_LIMIT = 2;
@@ -21,20 +19,29 @@ public class DreamAiUsageService {
     private final DreamAiUsageRepository dreamAiUsageRepository;
 
     /**
-     * 오늘 AI를 더 사용할 수 있는지 확인
+     * AI 사용권 1회를 원자적으로 선점한다.
      */
-    @Transactional(readOnly = true)
-    public void validateAvailable(Long userId) {
+    @Transactional
+    public void acquire(Long userId) {
 
-        int usedCount = dreamAiUsageRepository
-                .findByUserIdAndUsageDate(
+        LocalDate today = LocalDate.now();
+
+        // 1. 오늘 row가 없으면 생성
+        dreamAiUsageRepository.insertIfAbsent(
+                userId,
+                today
+        );
+
+        // 2. 한도 미만일 경우에만 +1
+        int updatedRows =
+                dreamAiUsageRepository.incrementIfAvailable(
                         userId,
-                        LocalDate.now()
-                )
-                .map(DreamAiUsage::getUsedCount)
-                .orElse(0);
+                        today,
+                        FREE_DAILY_LIMIT
+                );
 
-        if (usedCount >= FREE_DAILY_LIMIT) {
+        // UPDATE 된 row가 없다는 것은 이미 한도에 도달했다는 뜻
+        if (updatedRows == 0) {
             throw new CustomException(
                     ErrorCode.DREAM_AI_DAILY_LIMIT_EXCEEDED
             );
@@ -42,31 +49,19 @@ public class DreamAiUsageService {
     }
 
     /**
-     * AI 작업이 모두 성공한 뒤 사용 횟수 1 증가
+     * AI 처리 실패 시 선점했던 횟수를 되돌린다.
      */
-    public void use(User user) {
+    @Transactional
+    public void release(Long userId) {
 
-        LocalDate today = LocalDate.now();
-
-        DreamAiUsage usage = dreamAiUsageRepository
-                .findByUserIdAndUsageDate(
-                        user.getId(),
-                        today
-                )
-                .orElseGet(() ->
-                        dreamAiUsageRepository.save(
-                                DreamAiUsage.create(
-                                        user,
-                                        today
-                                )
-                        )
-                );
-
-        usage.increase();
+        dreamAiUsageRepository.decrement(
+                userId,
+                LocalDate.now()
+        );
     }
 
     /**
-     * 프론트에서 "AI로 완성하기 (2/2)" 같은 UI를 보여줄 때 사용
+     * 오늘 남은 AI 사용 횟수 조회
      */
     @Transactional(readOnly = true)
     public int getRemainingCount(Long userId) {

@@ -12,11 +12,13 @@ import com.dreamuniverse_server.global.exception.ErrorCode;
 import com.dreamuniverse_server.user.entity.User;
 import com.dreamuniverse_server.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DreamService {
@@ -25,6 +27,7 @@ public class DreamService {
     private final UserRepository userRepository;
 
     private final DreamCommandService dreamCommandService;
+
     private final DreamAiClient dreamAiClient;
     private final DreamAiUsageService dreamAiUsageService;
     private final DreamAiCompletionService dreamAiCompletionService;
@@ -45,7 +48,7 @@ public class DreamService {
         }
 
         // Transaction A
-        // Dream 원문 저장 후 바로 COMMIT
+        // 꿈 원문 저장
         Dream dream = dreamCommandService.create(
                 user,
                 request.title(),
@@ -78,8 +81,9 @@ public class DreamService {
     }
 
     @Transactional(readOnly = true)
-    public List<DreamResponse> getDreams(Long userId) {
-
+    public List<DreamResponse> getDreams(
+            Long userId
+    ) {
         getUser(userId);
 
         return dreamRepository
@@ -95,7 +99,6 @@ public class DreamService {
             DreamUpdateRequest request
     ) {
         // Transaction A
-        // 제목/내용 수정 후 COMMIT
         Dream dream = dreamCommandService.update(
                 dreamId,
                 userId,
@@ -130,41 +133,62 @@ public class DreamService {
             String content
     ) {
         /*
-         * 1. API 호출 전에 일일 한도 확인
+         * Transaction B
          *
-         * 이미 2/2라면 비싼 OpenAI API를
-         * 호출할 이유 자체가 없으므로 먼저 검사
+         * 사용 가능 여부 확인 + 사용권 1회 선점.
+         *
+         * 메서드 종료 시 바로 COMMIT.
          */
-        dreamAiUsageService.validateAvailable(
+        dreamAiUsageService.acquire(
                 user.getId()
         );
 
-        /*
-         * 2. 외부 OpenAI 호출
-         *
-         * 여기서는 DB Transaction이 열려 있지 않음.
-         */
-        DreamAnalysisResult result =
-                dreamAiClient.analyze(content);
+        try {
 
-        /*
-         * 3. Transaction B
-         *
-         * - DreamAnalysis
-         * - DreamEmotion
-         * - DreamElement
-         * - DreamAiUsage
-         *
-         * 전부 하나의 Transaction으로 처리
-         */
-        dreamAiCompletionService.complete(
-                user,
-                dream,
-                result
-        );
+            /*
+             * DB Transaction 없음.
+             *
+             * OpenAI가 2초든 10초든 걸려도
+             * DB Lock / Connection을 붙잡지 않는다.
+             */
+            DreamAnalysisResult result =
+                    dreamAiClient.analyze(content);
+
+            /*
+             * Transaction C
+             *
+             * Analysis / Emotion / Element 저장
+             */
+            dreamAiCompletionService.complete(
+                    dream,
+                    result
+            );
+
+        } catch (RuntimeException e) {
+
+            /*
+             * AI 호출이나 결과 저장 중 실패했다면
+             * 앞에서 선점했던 1회를 돌려준다.
+             */
+            try {
+                dreamAiUsageService.release(
+                        user.getId()
+                );
+            } catch (RuntimeException releaseException) {
+
+                log.error(
+                        "AI usage release failed. userId={}",
+                        user.getId(),
+                        releaseException
+                );
+            }
+
+            throw e;
+        }
     }
 
     private User getUser(Long userId) {
+
         return userRepository.findById(userId)
                 .filter(User::isSignupCompleted)
                 .orElseThrow(() ->
