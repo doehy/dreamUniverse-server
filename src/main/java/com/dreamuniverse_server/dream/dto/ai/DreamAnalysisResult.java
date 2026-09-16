@@ -9,7 +9,6 @@ import java.util.List;
 @Getter
 public class DreamAnalysisResult {
 
-    private String summary;
     private String interpretation;
     private List<EmotionResult> emotions;
     private List<ElementResult> elements;

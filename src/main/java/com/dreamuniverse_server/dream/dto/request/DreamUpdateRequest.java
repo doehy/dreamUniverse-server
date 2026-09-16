@@ -6,10 +6,13 @@ import jakarta.validation.constraints.Size;
 public record DreamUpdateRequest(
 
         @NotBlank
+        @Size(max = 50)
+        String title,
+
+        @NotBlank
         @Size(max = 1000)
         String content,
 
         boolean aiRequested
-
 ) {
 }

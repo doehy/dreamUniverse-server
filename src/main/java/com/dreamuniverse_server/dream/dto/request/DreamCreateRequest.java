@@ -10,6 +10,10 @@ import java.time.LocalDate;
 public record DreamCreateRequest(
 
         @NotBlank
+        @Size(max = 50)
+        String title,
+
+        @NotBlank
         @Size(max = 1000)
         String content,
 
@@ -18,6 +22,5 @@ public record DreamCreateRequest(
         LocalDate dreamDate,
 
         boolean aiRequested
-
 ) {
 }

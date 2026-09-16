@@ -27,7 +27,6 @@ public class DreamAnalysisService {
         DreamAnalysis analysis = dreamAnalysisRepository.findByDreamId(dream.getId())
                 .map(existing -> {
                     existing.update(
-                            result.getSummary(),
                             result.getInterpretation()
                     );
                     return existing;
@@ -36,7 +35,6 @@ public class DreamAnalysisService {
                         dreamAnalysisRepository.save(
                                 DreamAnalysis.create(
                                         dream,
-                                        result.getSummary(),
                                         result.getInterpretation()
                                 )
                         )

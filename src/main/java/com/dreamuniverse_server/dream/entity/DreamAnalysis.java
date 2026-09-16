@@ -28,30 +28,21 @@ public class DreamAnalysis extends BaseTimeEntity {
     @JoinColumn(name = "dream_id", nullable = false)
     private Dream dream;
 
-    @Column(nullable = false, length = 500)
-    private String summary;
-
     @Column(nullable = false, length = 2000)
     private String interpretation;
 
     public static DreamAnalysis create(
             Dream dream,
-            String summary,
             String interpretation
     ) {
         DreamAnalysis analysis = new DreamAnalysis();
         analysis.dream = dream;
-        analysis.summary = summary;
         analysis.interpretation = interpretation;
 
         return analysis;
     }
 
-    public void update(
-            String summary,
-            String interpretation
-    ) {
-        this.summary = summary;
+    public void update(String interpretation) {
         this.interpretation = interpretation;
     }
 }

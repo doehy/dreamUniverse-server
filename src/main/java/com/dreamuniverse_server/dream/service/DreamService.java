@@ -32,7 +32,7 @@ public class DreamService {
             throw new CustomException(ErrorCode.DREAM_ALREADY_EXISTS);
         }
 
-        Dream dream = Dream.create(user, request.content(), request.dreamDate());
+        Dream dream = Dream.create(user, request.title(), request.content(), request.dreamDate());
 
         dreamRepository.save(dream);
 
@@ -63,7 +63,7 @@ public class DreamService {
     public DreamResponse updateDream(Long userId, Long dreamId, DreamUpdateRequest request) {
         Dream dream = getDreamByUser(dreamId, userId);
 
-        dream.update(request.content());
+        dream.update(request.title(), request.content());
 
         if (request.aiRequested()) {
             // TODO AI 재분석/그림 재생성

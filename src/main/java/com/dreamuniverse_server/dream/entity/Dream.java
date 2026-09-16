@@ -31,6 +31,9 @@ public class Dream extends BaseTimeEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Column(nullable = false, length = 50)
+    private String title;
+
     @Column(nullable = false, length = 3000)
     private String content;
 
@@ -39,17 +42,23 @@ public class Dream extends BaseTimeEntity {
 
     public static Dream create(
             User user,
+            String title,
             String content,
             LocalDate dreamDate
     ) {
         Dream dream = new Dream();
         dream.user = user;
+        dream.title = title;
         dream.content = content;
         dream.dreamDate = dreamDate;
         return dream;
     }
 
-    public void update(String content) {
+    public void update(
+            String title,
+            String content
+    ) {
+        this.title = title;
         this.content = content;
     }
 }
