@@ -19,15 +19,15 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class DreamService {
 
     private final DreamRepository dreamRepository;
     private final UserRepository userRepository;
 
+    private final DreamCommandService dreamCommandService;
     private final DreamAiClient dreamAiClient;
-    private final DreamAnalysisService dreamAnalysisService;
     private final DreamAiUsageService dreamAiUsageService;
+    private final DreamAiCompletionService dreamAiCompletionService;
 
     public DreamResponse createDream(
             Long userId,
@@ -44,14 +44,14 @@ public class DreamService {
             );
         }
 
-        Dream dream = Dream.create(
+        // Transaction A
+        // Dream 원문 저장 후 바로 COMMIT
+        Dream dream = dreamCommandService.create(
                 user,
                 request.title(),
                 request.content(),
                 request.dreamDate()
         );
-
-        dreamRepository.save(dream);
 
         if (request.aiRequested()) {
             analyzeDream(
@@ -94,12 +94,11 @@ public class DreamService {
             Long dreamId,
             DreamUpdateRequest request
     ) {
-        Dream dream = getDreamByUser(
+        // Transaction A
+        // 제목/내용 수정 후 COMMIT
+        Dream dream = dreamCommandService.update(
                 dreamId,
-                userId
-        );
-
-        dream.update(
+                userId,
                 request.title(),
                 request.content()
         );
@@ -119,46 +118,53 @@ public class DreamService {
             Long userId,
             Long dreamId
     ) {
-        Dream dream = getDreamByUser(
+        dreamCommandService.delete(
                 dreamId,
                 userId
         );
-
-        dreamRepository.delete(dream);
     }
 
-    /**
-     * AI 분석 공통 처리
-     *
-     * 생성/수정에서 똑같은 코드가 반복되기 때문에
-     * private 메서드로 분리
-     */
     private void analyzeDream(
             User user,
             Dream dream,
             String content
     ) {
-        // 1. 오늘 AI를 더 사용할 수 있는지 확인
+        /*
+         * 1. API 호출 전에 일일 한도 확인
+         *
+         * 이미 2/2라면 비싼 OpenAI API를
+         * 호출할 이유 자체가 없으므로 먼저 검사
+         */
         dreamAiUsageService.validateAvailable(
                 user.getId()
         );
 
-        // 2. 실제 OpenAI 호출
+        /*
+         * 2. 외부 OpenAI 호출
+         *
+         * 여기서는 DB Transaction이 열려 있지 않음.
+         */
         DreamAnalysisResult result =
                 dreamAiClient.analyze(content);
 
-        // 3. 분석 결과 DB 저장
-        dreamAnalysisService.saveAnalysis(
+        /*
+         * 3. Transaction B
+         *
+         * - DreamAnalysis
+         * - DreamEmotion
+         * - DreamElement
+         * - DreamAiUsage
+         *
+         * 전부 하나의 Transaction으로 처리
+         */
+        dreamAiCompletionService.complete(
+                user,
                 dream,
                 result
         );
-
-        // 4. 여기까지 모두 성공했을 때만 사용 횟수 +1
-        dreamAiUsageService.use(user);
     }
 
     private User getUser(Long userId) {
-
         return userRepository.findById(userId)
                 .filter(User::isSignupCompleted)
                 .orElseThrow(() ->
