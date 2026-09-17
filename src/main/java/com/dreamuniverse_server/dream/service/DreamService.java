@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Slf4j
@@ -132,32 +133,24 @@ public class DreamService {
             Dream dream,
             String content
     ) {
+
         /*
-         * Transaction B
-         *
-         * 사용 가능 여부 확인 + 사용권 1회 선점.
-         *
-         * 메서드 종료 시 바로 COMMIT.
+         * 사용자 현지 날짜 기준으로
+         * AI 사용권 1회 선점.
          */
-        dreamAiUsageService.acquire(
-                user.getId()
-        );
+        LocalDate usageDate =
+                dreamAiUsageService.acquire(user);
 
         try {
 
             /*
-             * DB Transaction 없음.
-             *
-             * OpenAI가 2초든 10초든 걸려도
-             * DB Lock / Connection을 붙잡지 않는다.
+             * DB Transaction 없음
              */
             DreamAnalysisResult result =
                     dreamAiClient.analyze(content);
 
             /*
-             * Transaction C
-             *
-             * Analysis / Emotion / Element 저장
+             * AI 결과 저장 Transaction
              */
             dreamAiCompletionService.complete(
                     dream,
@@ -166,19 +159,25 @@ public class DreamService {
 
         } catch (RuntimeException e) {
 
-            /*
-             * AI 호출이나 결과 저장 중 실패했다면
-             * 앞에서 선점했던 1회를 돌려준다.
-             */
             try {
+
+                /*
+                 * acquire 당시 사용했던 날짜를 그대로 사용.
+                 *
+                 * 처리 중 자정을 넘겨도
+                 * 잘못된 날짜의 count를 감소시키지 않는다.
+                 */
                 dreamAiUsageService.release(
-                        user.getId()
+                        user.getId(),
+                        usageDate
                 );
+
             } catch (RuntimeException releaseException) {
 
                 log.error(
-                        "AI usage release failed. userId={}",
+                        "AI usage release failed. userId={}, usageDate={}",
                         user.getId(),
+                        usageDate,
                         releaseException
                 );
             }

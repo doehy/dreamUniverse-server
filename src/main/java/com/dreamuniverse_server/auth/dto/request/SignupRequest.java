@@ -8,9 +8,17 @@ public record SignupRequest(
         @NotBlank @Size(max = 30) String nickname,
         @NotNull @PastOrPresent LocalDate birthDate,
         @NotNull @AssertTrue Boolean termsOfServiceAgreed,
-        @NotNull @AssertTrue Boolean privacyPolicyAgreed) {
+        @NotNull @AssertTrue Boolean privacyPolicyAgreed,
+        @NotBlank @Size(max = 64) String timezone)
+{
     public SignupRequest {
-        if (nickname != null) nickname = nickname.strip();
+        if (nickname != null) {
+            nickname = nickname.strip();
+        }
+
+        if (timezone != null) {
+            timezone = timezone.strip();
+        }
     }
 
     @Override

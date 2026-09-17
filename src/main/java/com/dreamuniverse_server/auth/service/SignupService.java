@@ -50,7 +50,7 @@ public class SignupService {
         // Email and provider identity come exclusively from the verified server-side signup session.
         Long userId = userService.completeSignup(session.getProvider(), session.getProviderUserId(),
                 session.getEmail(), session.getName(), request.nickname(), request.birthDate(),
-                request.termsOfServiceAgreed(), request.privacyPolicyAgreed());
+                request.termsOfServiceAgreed(), request.privacyPolicyAgreed(), request.timezone());
         session.consume(now);
         // Discard any sessions issued by the former automatic-registration flow.
         refreshTokenService.revokeAllForUser(userId);

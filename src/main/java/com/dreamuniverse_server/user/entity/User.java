@@ -29,6 +29,9 @@ public class User extends BaseTimeEntity {
     @Column(length = 255)
     private String name;
 
+    @Column(name = "timezone", nullable = false, length = 64)
+    private String timezone;
+
     // Nullable for legacy users; only completed signups may receive service tokens.
     @Column(length = 30)
     private String nickname;
@@ -44,13 +47,26 @@ public class User extends BaseTimeEntity {
         return user;
     }
 
+    public void updateTimezone(String timezone) {
+        this.timezone = timezone;
+    }
+
     public boolean isSignupCompleted() { return signupCompletedAt != null; }
 
-    public void completeSignup(String email, String name, String nickname, LocalDate birthDate, Instant now) {
+    public void completeSignup(
+            String email,
+            String name,
+            String nickname,
+            LocalDate birthDate,
+            String timezone,
+            Instant now
+    ) {
         this.email = email;
         this.name = name;
         this.nickname = nickname;
         this.birthDate = birthDate;
+        this.timezone = timezone;
+
         this.termsOfServiceAgreedAt = now;
         this.privacyPolicyAgreedAt = now;
         this.signupCompletedAt = now;
