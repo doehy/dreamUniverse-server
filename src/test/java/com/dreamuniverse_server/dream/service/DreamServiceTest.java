@@ -5,6 +5,16 @@ import com.dreamuniverse_server.dream.dto.ai.DreamAnalysisResult;
 import com.dreamuniverse_server.dream.dto.request.DreamCreateRequest;
 import com.dreamuniverse_server.dream.entity.Dream;
 import com.dreamuniverse_server.dream.dto.response.DreamAiUsageResponse;
+import com.dreamuniverse_server.dream.repository.DreamAnalysisRepository;
+import com.dreamuniverse_server.dream.repository.DreamElementRepository;
+import com.dreamuniverse_server.dream.repository.DreamEmotionRepository;
+import com.dreamuniverse_server.dream.dto.response.DreamAnalysisResponse;
+import com.dreamuniverse_server.dream.entity.DreamAnalysis;
+import com.dreamuniverse_server.dream.entity.DreamElement;
+import com.dreamuniverse_server.dream.entity.DreamEmotion;
+import com.dreamuniverse_server.dream.entity.DreamElementType;
+import com.dreamuniverse_server.dream.entity.DreamEmotionType;
+import com.dreamuniverse_server.global.exception.CustomException;
 import com.dreamuniverse_server.user.entity.OAuthProvider;
 import com.dreamuniverse_server.dream.repository.DreamRepository;
 import com.dreamuniverse_server.user.entity.User;
@@ -18,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.time.Instant;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -31,6 +42,15 @@ class DreamServiceTest {
 
     @Mock
     private DreamRepository dreamRepository;
+
+    @Mock
+    private DreamAnalysisRepository dreamAnalysisRepository;
+
+    @Mock
+    private DreamEmotionRepository dreamEmotionRepository;
+
+    @Mock
+    private DreamElementRepository dreamElementRepository;
 
     @Mock
     private UserRepository userRepository;
@@ -422,5 +442,250 @@ class DreamServiceTest {
                 dreamAiUsageService
         )
                 .getRemainingCount(user);
+    }
+
+    @Test
+    void 꿈의_AI_분석결과를_조회한다() {
+
+        // given
+        Long userId = 1L;
+        Long dreamId = 10L;
+        Long analysisId = 100L;
+
+        User user = User.create(
+                OAuthProvider.GOOGLE,
+                "analysis-test-user"
+        );
+
+        user.completeSignup(
+                "analysis@test.com",
+                "Test User",
+                "tester",
+                LocalDate.of(2000, 1, 1),
+                "Asia/Seoul",
+                Instant.now()
+        );
+
+        /*
+         * DreamAnalysisResponse.from()에서 필요한 값만
+         * Entity mock으로 준비한다.
+         *
+         * Dream, Analysis, Emotion, Element의 정확한 factory 메서드는
+         * 현재 테스트 목적과 관계없으므로 여기서는 필요한 getter만 mock한다.
+         */
+        Dream dream = mock(Dream.class);
+        DreamAnalysis analysis = mock(DreamAnalysis.class);
+
+        DreamEmotion anxiety = mock(DreamEmotion.class);
+        DreamEmotion confusion = mock(DreamEmotion.class);
+
+        DreamElement place = mock(DreamElement.class);
+        DreamElement event = mock(DreamElement.class);
+
+
+        given(
+                userRepository.findById(userId)
+        )
+                .willReturn(Optional.of(user));
+
+        given(
+                dreamRepository.findByIdAndUserId(
+                        dreamId,
+                        user.getId()
+                )
+        )
+                .willReturn(Optional.of(dream));
+
+        given(dream.getId())
+                .willReturn(dreamId);
+
+        given(
+                dreamAnalysisRepository.findByDreamId(dreamId)
+        )
+                .willReturn(Optional.of(analysis));
+
+        given(analysis.getId())
+                .willReturn(analysisId);
+
+        given(analysis.getInterpretation())
+                .willReturn(
+                        "시험에 대한 압박감과 불확실한 감정이 반영된 꿈입니다."
+                );
+
+
+        given(anxiety.getEmotionType())
+                .willReturn(DreamEmotionType.ANXIETY);
+
+        given(anxiety.getScore())
+                .willReturn(80);
+
+        given(confusion.getEmotionType())
+                .willReturn(DreamEmotionType.CONFUSION);
+
+        given(confusion.getScore())
+                .willReturn(55);
+
+
+        given(place.getElementType())
+                .willReturn(DreamElementType.PLACE);
+
+        given(place.getElementValue())
+                .willReturn("학교");
+
+        given(event.getElementType())
+                .willReturn(DreamElementType.EVENT);
+
+        given(event.getElementValue())
+                .willReturn("시험");
+
+
+        given(
+                dreamEmotionRepository.findAllByAnalysisId(
+                        analysisId
+                )
+        )
+                .willReturn(
+                        List.of(
+                                anxiety,
+                                confusion
+                        )
+                );
+
+        given(
+                dreamElementRepository.findAllByAnalysisId(
+                        analysisId
+                )
+        )
+                .willReturn(
+                        List.of(
+                                place,
+                                event
+                        )
+                );
+
+
+        // when
+        DreamAnalysisResponse response =
+                dreamService.getAnalysis(
+                        userId,
+                        dreamId
+                );
+
+
+        // then
+        assertThat(response.interpretation())
+                .isEqualTo(
+                        "시험에 대한 압박감과 불확실한 감정이 반영된 꿈입니다."
+                );
+
+        assertThat(response.emotions())
+                .hasSize(2);
+
+        assertThat(response.emotions().get(0).type())
+                .isEqualTo("ANXIETY");
+
+        assertThat(response.emotions().get(0).score())
+                .isEqualTo(80);
+
+        assertThat(response.emotions().get(1).type())
+                .isEqualTo("CONFUSION");
+
+        assertThat(response.emotions().get(1).score())
+                .isEqualTo(55);
+
+
+        assertThat(response.elements())
+                .hasSize(2);
+
+        assertThat(response.elements().get(0).type())
+                .isEqualTo("PLACE");
+
+        assertThat(response.elements().get(0).value())
+                .isEqualTo("학교");
+
+        assertThat(response.elements().get(1).type())
+                .isEqualTo("EVENT");
+
+        assertThat(response.elements().get(1).value())
+                .isEqualTo("시험");
+
+
+        verify(
+                dreamAnalysisRepository
+        )
+                .findByDreamId(dreamId);
+
+        verify(
+                dreamEmotionRepository
+        )
+                .findAllByAnalysisId(analysisId);
+
+        verify(
+                dreamElementRepository
+        )
+                .findAllByAnalysisId(analysisId);
+    }
+
+    @Test
+    void AI_분석결과가_없으면_예외가_발생한다() {
+
+        // given
+        Long userId = 1L;
+        Long dreamId = 10L;
+
+        User user = User.create(
+                OAuthProvider.GOOGLE,
+                "analysis-not-found-user"
+        );
+
+        user.completeSignup(
+                "analysis-not-found@test.com",
+                "Test User",
+                "tester",
+                LocalDate.of(2000, 1, 1),
+                "Asia/Seoul",
+                Instant.now()
+        );
+
+        Dream dream = mock(Dream.class);
+
+        given(
+                userRepository.findById(userId)
+        )
+                .willReturn(
+                        Optional.of(user)
+                );
+
+        given(
+                dreamRepository.findByIdAndUserId(
+                        dreamId,
+                        user.getId()
+                )
+        )
+                .willReturn(
+                        Optional.of(dream)
+                );
+
+        given(dream.getId())
+                .willReturn(dreamId);
+
+        given(
+                dreamAnalysisRepository.findByDreamId(
+                        dreamId
+                )
+        )
+                .willReturn(
+                        Optional.empty()
+                );
+
+
+        // when & then
+        assertThatThrownBy(
+                () -> dreamService.getAnalysis(
+                        userId,
+                        dreamId
+                )
+        )
+                .isInstanceOf(CustomException.class);
     }
 }
