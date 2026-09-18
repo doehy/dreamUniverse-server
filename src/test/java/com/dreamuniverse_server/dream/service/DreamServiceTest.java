@@ -4,6 +4,8 @@ import com.dreamuniverse_server.dream.client.DreamAiClient;
 import com.dreamuniverse_server.dream.dto.ai.DreamAnalysisResult;
 import com.dreamuniverse_server.dream.dto.request.DreamCreateRequest;
 import com.dreamuniverse_server.dream.entity.Dream;
+import com.dreamuniverse_server.dream.dto.response.DreamAiUsageResponse;
+import com.dreamuniverse_server.user.entity.OAuthProvider;
 import com.dreamuniverse_server.dream.repository.DreamRepository;
 import com.dreamuniverse_server.user.entity.User;
 import com.dreamuniverse_server.user.repository.UserRepository;
@@ -15,9 +17,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.time.Instant;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -365,5 +371,56 @@ class DreamServiceTest {
                         anyLong(),
                         any(LocalDate.class)
                 );
+    }
+
+    @Test
+    void AI_남은_사용횟수를_조회한다() {
+
+        // given
+        Long userId = 1L;
+
+        User user = User.create(
+                OAuthProvider.GOOGLE,
+                "test-provider-user-id"
+        );
+
+        user.completeSignup(
+                "test@test.com",
+                "Test User",
+                "tester",
+                LocalDate.of(2000, 1, 1),
+                "Asia/Seoul",
+                Instant.now()
+        );
+
+        given(
+                userRepository.findById(userId)
+        )
+                .willReturn(
+                        Optional.of(user)
+                );
+
+        given(
+                dreamAiUsageService.getRemainingCount(user)
+        )
+                .willReturn(1);
+
+
+        // when
+        DreamAiUsageResponse response =
+                dreamService.getAiUsage(userId);
+
+
+        // then
+        assertThat(response.remainingCount())
+                .isEqualTo(1);
+
+        assertThat(response.dailyLimit())
+                .isEqualTo(2);
+
+        verify(
+                dreamAiUsageService
+        )
+                .getRemainingCount(user);
     }
 }
