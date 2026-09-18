@@ -3,6 +3,7 @@ package com.dreamuniverse_server.dream.controller;
 import com.dreamuniverse_server.dream.dto.request.DreamCreateRequest;
 import com.dreamuniverse_server.dream.dto.request.DreamUpdateRequest;
 import com.dreamuniverse_server.dream.dto.response.DreamResponse;
+import com.dreamuniverse_server.dream.dto.response.DreamAnalysisResponse;
 import com.dreamuniverse_server.dream.dto.response.DreamAiUsageResponse;
 import com.dreamuniverse_server.dream.service.DreamService;
 import jakarta.validation.Valid;
@@ -110,6 +111,28 @@ public class DreamController {
         return ResponseEntity.ok(
                 dreamService.getAiUsage(
                         userId
+                )
+        );
+    }
+
+    /**
+     * 꿈 분석 상세 조회
+     */
+    @GetMapping("/{dreamId}/analysis")
+    public ResponseEntity<DreamAnalysisResponse> getAnalysis(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long dreamId
+    ) {
+
+        Long userId =
+                Long.valueOf(
+                        jwt.getSubject()
+                );
+
+        return ResponseEntity.ok(
+                dreamService.getAnalysis(
+                        userId,
+                        dreamId
                 )
         );
     }

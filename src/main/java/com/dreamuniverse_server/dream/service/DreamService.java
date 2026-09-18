@@ -5,8 +5,15 @@ import com.dreamuniverse_server.dream.dto.ai.DreamAnalysisResult;
 import com.dreamuniverse_server.dream.dto.request.DreamCreateRequest;
 import com.dreamuniverse_server.dream.dto.request.DreamUpdateRequest;
 import com.dreamuniverse_server.dream.dto.response.DreamResponse;
+import com.dreamuniverse_server.dream.dto.response.DreamAnalysisResponse;
 import com.dreamuniverse_server.dream.dto.response.DreamAiUsageResponse;
 import com.dreamuniverse_server.dream.entity.Dream;
+import com.dreamuniverse_server.dream.entity.DreamAnalysis;
+import com.dreamuniverse_server.dream.entity.DreamElement;
+import com.dreamuniverse_server.dream.entity.DreamEmotion;
+import com.dreamuniverse_server.dream.repository.DreamAnalysisRepository;
+import com.dreamuniverse_server.dream.repository.DreamElementRepository;
+import com.dreamuniverse_server.dream.repository.DreamEmotionRepository;
 import com.dreamuniverse_server.dream.repository.DreamRepository;
 import com.dreamuniverse_server.global.exception.CustomException;
 import com.dreamuniverse_server.global.exception.ErrorCode;
@@ -26,6 +33,9 @@ import java.util.List;
 public class DreamService {
 
     private final DreamRepository dreamRepository;
+    private final DreamAnalysisRepository dreamAnalysisRepository;
+    private final DreamEmotionRepository dreamEmotionRepository;
+    private final DreamElementRepository dreamElementRepository;
     private final UserRepository userRepository;
 
     private final DreamCommandService dreamCommandService;
@@ -144,6 +154,57 @@ public class DreamService {
         dreamCommandService.delete(
                 dreamId,
                 userId
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public DreamAnalysisResponse getAnalysis(
+            Long userId,
+            Long dreamId
+    ) {
+
+        User user =
+                getUser(userId);
+
+        Dream dream =
+                dreamRepository
+                        .findByIdAndUserId(
+                                dreamId,
+                                user.getId()
+                        )
+                        .orElseThrow(
+                                () -> new CustomException(
+                                        ErrorCode.DREAM_NOT_FOUND
+                                )
+                        );
+
+        DreamAnalysis analysis =
+                dreamAnalysisRepository
+                        .findByDreamId(
+                                dream.getId()
+                        )
+                        .orElseThrow(
+                                () -> new CustomException(
+                                        ErrorCode.DREAM_ANALYSIS_NOT_FOUND
+                                )
+                        );
+
+        List<DreamEmotion> emotions =
+                dreamEmotionRepository
+                        .findAllByAnalysisId(
+                                analysis.getId()
+                        );
+
+        List<DreamElement> elements =
+                dreamElementRepository
+                        .findAllByAnalysisId(
+                                analysis.getId()
+                        );
+
+        return DreamAnalysisResponse.from(
+                analysis,
+                emotions,
+                elements
         );
     }
 
