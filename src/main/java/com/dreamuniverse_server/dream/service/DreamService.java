@@ -5,6 +5,7 @@ import com.dreamuniverse_server.dream.dto.ai.DreamAnalysisResult;
 import com.dreamuniverse_server.dream.dto.request.DreamCreateRequest;
 import com.dreamuniverse_server.dream.dto.request.DreamUpdateRequest;
 import com.dreamuniverse_server.dream.dto.response.DreamResponse;
+import com.dreamuniverse_server.dream.dto.response.DreamAiUsageResponse;
 import com.dreamuniverse_server.dream.entity.Dream;
 import com.dreamuniverse_server.dream.repository.DreamRepository;
 import com.dreamuniverse_server.global.exception.CustomException;
@@ -116,6 +117,24 @@ public class DreamService {
         }
 
         return DreamResponse.from(dream);
+    }
+
+    @Transactional(readOnly = true)
+    public DreamAiUsageResponse getAiUsage(
+            Long userId
+    ) {
+
+        User user =
+                getUser(userId);
+
+        int remainingCount =
+                dreamAiUsageService
+                        .getRemainingCount(user);
+
+        return new DreamAiUsageResponse(
+                remainingCount,
+                DreamAiUsageService.FREE_DAILY_LIMIT
+        );
     }
 
     public void deleteDream(

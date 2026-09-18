@@ -3,6 +3,7 @@ package com.dreamuniverse_server.dream.controller;
 import com.dreamuniverse_server.dream.dto.request.DreamCreateRequest;
 import com.dreamuniverse_server.dream.dto.request.DreamUpdateRequest;
 import com.dreamuniverse_server.dream.dto.response.DreamResponse;
+import com.dreamuniverse_server.dream.dto.response.DreamAiUsageResponse;
 import com.dreamuniverse_server.dream.service.DreamService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -91,5 +92,25 @@ public class DreamController {
         dreamService.deleteDream(userId, dreamId);
 
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Ai 분석 사용량 확인
+     */
+    @GetMapping("/ai-usage")
+    public ResponseEntity<DreamAiUsageResponse> getAiUsage(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+
+        Long userId =
+                Long.valueOf(
+                        jwt.getSubject()
+                );
+
+        return ResponseEntity.ok(
+                dreamService.getAiUsage(
+                        userId
+                )
+        );
     }
 }

@@ -17,7 +17,7 @@ import java.time.ZoneId;
 @RequiredArgsConstructor
 public class DreamAiUsageService {
 
-    private static final int FREE_DAILY_LIMIT = 2;
+    public static final int FREE_DAILY_LIMIT = 2;
 
     private final DreamAiUsageRepository dreamAiUsageRepository;
 
