@@ -36,6 +36,9 @@ public class DreamImageClient {
                         .quality(
                                 getImageQuality()
                         )
+                        .outputFormat(
+                                ImageGenerateParams.OutputFormat.PNG
+                        )
                         .build();
 
 

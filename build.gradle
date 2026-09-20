@@ -27,6 +27,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'com.openai:openai-java:4.63.1'
 
+    // Cloudflare R2 (S3 Compatible API)
+    implementation 'software.amazon.awssdk:s3:2.54.20'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
