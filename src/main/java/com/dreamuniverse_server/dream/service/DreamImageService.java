@@ -27,9 +27,7 @@ public class DreamImageService {
     ) {
         LocalDate today =
                 LocalDate.now(
-                        ZoneId.of(
-                                user.getTimezone()
-                        )
+                        ZoneId.of(user.getTimezone())
                 );
 
         boolean adult =
@@ -39,9 +37,7 @@ public class DreamImageService {
                 );
 
         int maxImageCount =
-                subscriptionPolicy.getMaxImageCount(
-                        user
-                );
+                subscriptionPolicy.getMaxImageCount(user);
 
         String prompt =
                 dreamImagePromptBuilder.build(
@@ -50,8 +46,6 @@ public class DreamImageService {
                         maxImageCount
                 );
 
-        return dreamImageClient.generate(
-                prompt
-        );
+        return dreamImageClient.generate(prompt);
     }
 }

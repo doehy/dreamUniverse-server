@@ -15,8 +15,8 @@ public class DreamImagePromptBuilder {
             - 성폭력, 강압적 성적 상황, 아동 대상 성적 표현은 생성하지 않는다.
             - 심한 고어, 신체 절단, 내장 노출, 극단적인 신체 훼손은 표현하지 않는다.
             - 자해, 자살, 학대 장면은 자극적이거나 미화된 방식으로 묘사하지 않는다.
-            - 금지되는 장면이 포함된 경우 꿈의 의미와 흐름을 유지하면서
-              안전하고 상징적인 장면으로 자연스럽게 순화한다.
+            - 금지되는 요소가 포함된 경우,
+              꿈의 핵심 의미와 흐름은 유지하면서 안전하고 상징적으로 순화한다.
             """;
 
     private static final String MINOR_RULES = """
@@ -32,21 +32,20 @@ public class DreamImagePromptBuilder {
             [성인 사용자 추가 규칙]
             - 사용자가 기록한 꿈의 사건과 분위기를 가능한 한 충실하게 표현한다.
             - 폭력적이거나 관능적인 분위기가 있어도 꿈의 맥락은 유지한다.
-            - 다만 공통 절대 규칙을 항상 우선한다.
+            - 다만 공통 절대 규칙은 항상 우선한다.
             - 심한 고어, 노골적인 성행위, 과도한 노출은 표현하지 않는다.
-            - 필요한 경우 핵심 의미를 유지한 채 자연스럽게 순화한다.
+            - 제한이 필요한 경우 핵심 의미를 유지한 채 자연스럽게 순화한다.
             """;
 
     private static final String SINGLE_IMAGE_RULES = """
-            [1장만 생성할 때의 스토리 규칙]
+            [1장 생성 시 스토리 규칙]
             - 꿈 전체를 억지로 4컷 안에 압축하거나 요약하지 않는다.
             - 꿈의 시작 부분부터 실제 사건이 진행된 순서대로 장면을 선택한다.
             - 4컷 안에 자연스럽게 담을 수 있는 범위까지만 표현한다.
-            - 아직 꿈의 뒷내용이 남아 있어도 결말을 임의로 앞당겨 표현하지 않는다.
-            - 꿈의 후반부 사건을 앞부분과 섞어서 보여주지 않는다.
-            - 마지막 컷이 이야기 중간에서 끝나는 느낌이어도 괜찮다.
-            - 사용자가 이어지는 다음 장면을 자연스럽게 궁금해할 수 있도록
-              원래 꿈의 흐름을 그대로 유지한다.
+            - 꿈의 뒷부분이 남아 있어도 결말을 임의로 앞당겨 보여주지 않는다.
+            - 후반부 사건을 앞부분과 섞어서 보여주지 않는다.
+            - 마지막 컷이 꿈 이야기 중간에서 끝나는 느낌이어도 괜찮다.
+            - 원래 꿈의 시간적 흐름을 우선한다.
             """;
 
     public String build(
@@ -56,19 +55,17 @@ public class DreamImagePromptBuilder {
     ) {
         validateMaxImageCount(maxImageCount);
 
-        String ageRules =
-                adult
-                        ? ADULT_RULES
-                        : MINOR_RULES;
+        String ageRules = adult
+                ? ADULT_RULES
+                : MINOR_RULES;
 
-        String imageCountRules =
-                maxImageCount == 1
-                        ? SINGLE_IMAGE_RULES
-                        : buildMultiImageRules(maxImageCount);
+        String imageCountRules = maxImageCount == 1
+                ? SINGLE_IMAGE_RULES
+                : buildMultiImageRules(maxImageCount);
 
         return """
-                당신은 사용자가 실제로 기록한 꿈을
-                감성적인 4컷 꿈 만화 이미지로 표현합니다.
+                당신은 사용자가 기록한 실제 꿈을
+                감성적인 꿈 만화 이미지로 표현합니다.
 
                 %s
 
@@ -80,8 +77,8 @@ public class DreamImagePromptBuilder {
                 - 이번 요청에서는 이미지 한 장을 생성한다.
                 - 한 장의 이미지 안에 정확히 4개의 패널을 구성한다.
                 - 패널은 2x2 격자 형태로 배치한다.
-                - 장면은 왼쪽 위 → 오른쪽 위 → 왼쪽 아래 → 오른쪽 아래 순서로 진행된다.
-                - 네 컷의 시간적 흐름이 자연스럽게 이어져야 한다.
+                - 장면은 왼쪽 위 → 오른쪽 위 → 왼쪽 아래 → 오른쪽 아래 순서로 진행한다.
+                - 네 컷은 시간적으로 자연스럽게 이어져야 한다.
                 - 같은 인물이 여러 컷에 등장하면 외형, 머리 모양, 의상 등의 특징을 일관되게 유지한다.
                 - 각 패널의 경계를 분명하게 표현한다.
                 - 각 컷의 주요 장면이 충분히 크게 보이도록 구성한다.
@@ -107,20 +104,18 @@ public class DreamImagePromptBuilder {
     }
 
     private String buildMultiImageRules(int maxImageCount) {
-
         return """
-                [여러 장을 사용할 수 있을 때의 스토리 규칙]
+                [여러 장 사용 가능 시 스토리 규칙]
                 - 이 사용자는 최대 %d장의 이미지를 사용할 수 있다.
-                - 꿈 전체를 한 장에 억지로 압축하지 않는다.
-                - 꿈의 사건을 처음부터 끝까지 시간 순서대로 여러 이미지에 분배할 수 있다.
-                - 각 이미지 역시 앞 이미지의 다음 장면부터 자연스럽게 이어져야 한다.
+                - 꿈 전체를 한 장 안에 억지로 압축하지 않는다.
+                - 꿈의 사건은 처음부터 끝까지 시간 순서대로 여러 이미지에 나눌 수 있다.
+                - 각 이미지는 앞 이미지의 다음 장면부터 자연스럽게 이어져야 한다.
                 - 후반부 사건을 앞 이미지에 미리 보여주지 않는다.
                 - 꿈의 분량이 짧다면 허용된 최대 장수를 반드시 모두 사용할 필요는 없다.
                 """.formatted(maxImageCount);
     }
 
     private void validateMaxImageCount(int maxImageCount) {
-
         if (maxImageCount < 1 || maxImageCount > 3) {
             throw new IllegalArgumentException(
                     "maxImageCount must be between 1 and 3: "
