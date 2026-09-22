@@ -71,7 +71,8 @@ public class DreamAiAsyncService {
             newImageKey =
                     dreamImageService.generateAndUpload(
                             user,
-                            dream
+                            dreamId,
+                            content
                     );
 
 

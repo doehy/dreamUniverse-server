@@ -32,19 +32,17 @@ public class DreamImageService {
 
     public String generateAndUpload(
             User user,
-            Dream dream
+            Long dreamId,
+            String content
     ) {
-        boolean adult =
-                isAdult(user);
+        boolean adult = isAdult(user);
 
         int maxImageCount =
-                subscriptionPolicy.getMaxImageCount(
-                        user
-                );
+                subscriptionPolicy.getMaxImageCount(user);
 
         String prompt =
                 dreamImagePromptBuilder.build(
-                        dream.getContent(),
+                        content,
                         adult,
                         maxImageCount
                 );
@@ -56,7 +54,7 @@ public class DreamImageService {
 
         String imageKey =
                 createImageKey(
-                        dream.getId()
+                        dreamId
                 );
 
         imageStorageService.upload(
