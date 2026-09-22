@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class DreamImagePersistenceService {
@@ -14,10 +16,21 @@ public class DreamImagePersistenceService {
     private final DreamImageRepository dreamImageRepository;
 
     @Transactional
-    public DreamImage replace(
+    public List<String> replace(
             Dream dream,
             String imageKey
     ) {
+        List<String> oldImageKeys =
+                dreamImageRepository
+                        .findAllByDreamIdOrderByImageOrderAsc(
+                                dream.getId()
+                        )
+                        .stream()
+                        .map(
+                                DreamImage::getImageKey
+                        )
+                        .toList();
+
         dreamImageRepository.deleteByDreamId(
                 dream.getId()
         );
@@ -29,8 +42,10 @@ public class DreamImagePersistenceService {
                         1
                 );
 
-        return dreamImageRepository.save(
+        dreamImageRepository.save(
                 dreamImage
         );
+
+        return oldImageKeys;
     }
 }

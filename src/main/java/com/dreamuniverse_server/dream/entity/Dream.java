@@ -34,11 +34,20 @@ public class Dream extends BaseTimeEntity {
     @Column(nullable = false, length = 50)
     private String title;
 
-    @Column(nullable = false, length = 3000)
-    private String content;
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "ai_status",
+            nullable = false,
+            length = 20,
+            columnDefinition = "varchar(20)"
+    )
+    private DreamAiStatus aiStatus;
 
     @Column(name = "dream_date", nullable = false)
     private LocalDate dreamDate;
+
+    @Column(nullable = false, length = 3000)
+    private String content;
 
     public static Dream create(
             User user,
@@ -47,10 +56,13 @@ public class Dream extends BaseTimeEntity {
             LocalDate dreamDate
     ) {
         Dream dream = new Dream();
+
         dream.user = user;
         dream.title = title;
         dream.content = content;
         dream.dreamDate = dreamDate;
+        dream.aiStatus = DreamAiStatus.NOT_REQUESTED;
+
         return dream;
     }
 
@@ -60,5 +72,17 @@ public class Dream extends BaseTimeEntity {
     ) {
         this.title = title;
         this.content = content;
+    }
+
+    public void startAiCompletion() {
+        this.aiStatus = DreamAiStatus.PROCESSING;
+    }
+
+    public void completeAiCompletion() {
+        this.aiStatus = DreamAiStatus.COMPLETED;
+    }
+
+    public void failAiCompletion() {
+        this.aiStatus = DreamAiStatus.FAILED;
     }
 }
