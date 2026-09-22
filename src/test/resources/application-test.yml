@@ -1,0 +1,11 @@
+r2:
+  account-id: test-account
+  access-key-id: test-access-key
+  secret-access-key: test-secret-key
+  bucket-name: test-bucket
+
+openai:
+  api-key: test-openai-api-key
+  text-model: gpt-5-mini
+  image-model: gpt-image-1-mini
+  image-quality: medium
