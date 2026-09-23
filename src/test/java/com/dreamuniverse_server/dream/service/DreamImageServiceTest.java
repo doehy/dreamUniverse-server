@@ -2,7 +2,6 @@ package com.dreamuniverse_server.dream.service;
 
 import com.dreamuniverse_server.dream.client.DreamImageClient;
 import com.dreamuniverse_server.dream.dto.ai.DreamImageResult;
-import com.dreamuniverse_server.dream.entity.Dream;
 import com.dreamuniverse_server.dream.policy.AdultPolicy;
 import com.dreamuniverse_server.dream.policy.SubscriptionPolicy;
 import com.dreamuniverse_server.dream.prompt.DreamImagePromptBuilder;
@@ -22,8 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class DreamImageServiceTest {
@@ -46,9 +44,6 @@ class DreamImageServiceTest {
     @Mock
     private User user;
 
-    @Mock
-    private Dream dream;
-
     private DreamImageService dreamImageService;
 
 
@@ -69,6 +64,9 @@ class DreamImageServiceTest {
     void 이미지를_생성하고_R2에_업로드한_뒤_imageKey를_반환한다() {
 
         // given
+        Long dreamId = 10L;
+        String content = "하늘을 날아다니는 꿈";
+
         byte[] imageBytes =
                 new byte[]{1, 2, 3};
 
@@ -78,14 +76,6 @@ class DreamImageServiceTest {
         given(user.getBirthDate())
                 .willReturn(
                         LocalDate.of(2000, 1, 1)
-                );
-
-        given(dream.getId())
-                .willReturn(10L);
-
-        given(dream.getContent())
-                .willReturn(
-                        "하늘을 날아다니는 꿈"
                 );
 
         given(
@@ -101,7 +91,7 @@ class DreamImageServiceTest {
 
         given(
                 dreamImagePromptBuilder.build(
-                        "하늘을 날아다니는 꿈",
+                        content,
                         true,
                         1
                 )
@@ -124,7 +114,8 @@ class DreamImageServiceTest {
         String imageKey =
                 dreamImageService.generateAndUpload(
                         user,
-                        dream
+                        dreamId,
+                        content
                 );
 
 
@@ -136,6 +127,7 @@ class DreamImageServiceTest {
                 .endsWith(
                         ".png"
                 );
+
 
         verify(imageStorageService)
                 .upload(
@@ -149,17 +141,15 @@ class DreamImageServiceTest {
     void OpenAI_이미지_생성에_실패하면_R2를_호출하지_않는다() {
 
         // given
+        Long dreamId = 10L;
+        String content = "꿈 내용";
+
         given(user.getTimezone())
                 .willReturn("Asia/Seoul");
 
         given(user.getBirthDate())
                 .willReturn(
                         LocalDate.of(2000, 1, 1)
-                );
-
-        given(dream.getContent())
-                .willReturn(
-                        "꿈 내용"
                 );
 
         given(
@@ -175,7 +165,7 @@ class DreamImageServiceTest {
 
         given(
                 dreamImagePromptBuilder.build(
-                        "꿈 내용",
+                        content,
                         true,
                         1
                 )
@@ -198,11 +188,15 @@ class DreamImageServiceTest {
         assertThatThrownBy(
                 () -> dreamImageService.generateAndUpload(
                         user,
-                        dream
+                        dreamId,
+                        content
                 )
         )
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("OpenAI failure");
+                .hasMessage(
+                        "OpenAI failure"
+                );
+
 
         verifyNoInteractions(
                 imageStorageService
@@ -214,6 +208,9 @@ class DreamImageServiceTest {
     void R2_업로드에_실패하면_예외를_전파한다() {
 
         // given
+        Long dreamId = 10L;
+        String content = "꿈 내용";
+
         byte[] imageBytes =
                 new byte[]{1, 2, 3};
 
@@ -223,14 +220,6 @@ class DreamImageServiceTest {
         given(user.getBirthDate())
                 .willReturn(
                         LocalDate.of(2000, 1, 1)
-                );
-
-        given(dream.getId())
-                .willReturn(10L);
-
-        given(dream.getContent())
-                .willReturn(
-                        "꿈 내용"
                 );
 
         given(
@@ -246,7 +235,7 @@ class DreamImageServiceTest {
 
         given(
                 dreamImagePromptBuilder.build(
-                        "꿈 내용",
+                        content,
                         true,
                         1
                 )
@@ -270,12 +259,12 @@ class DreamImageServiceTest {
                         String.class
                 );
 
-        org.mockito.Mockito
-                .doThrow(
-                        new RuntimeException(
-                                "R2 upload failure"
-                        )
+
+        doThrow(
+                new RuntimeException(
+                        "R2 upload failure"
                 )
+        )
                 .when(imageStorageService)
                 .upload(
                         eq(imageBytes),
@@ -287,11 +276,14 @@ class DreamImageServiceTest {
         assertThatThrownBy(
                 () -> dreamImageService.generateAndUpload(
                         user,
-                        dream
+                        dreamId,
+                        content
                 )
         )
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("R2 upload failure");
+                .hasMessage(
+                        "R2 upload failure"
+                );
 
 
         assertThat(
