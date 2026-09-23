@@ -2,9 +2,11 @@ package com.dreamuniverse_server.dream.controller;
 
 import com.dreamuniverse_server.dream.dto.request.DreamCreateRequest;
 import com.dreamuniverse_server.dream.dto.request.DreamUpdateRequest;
+import com.dreamuniverse_server.dream.dto.response.DreamGalleryResponse;
 import com.dreamuniverse_server.dream.dto.response.DreamResponse;
 import com.dreamuniverse_server.dream.dto.response.DreamAnalysisResponse;
 import com.dreamuniverse_server.dream.dto.response.DreamAiUsageResponse;
+import com.dreamuniverse_server.dream.service.DreamGalleryService;
 import com.dreamuniverse_server.dream.service.DreamService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ import java.util.List;
 public class DreamController {
 
     private final DreamService dreamService;
+    private final DreamGalleryService dreamGalleryService;
 
     /**
      * 꿈 작성
@@ -133,6 +136,26 @@ public class DreamController {
                 dreamService.getAnalysis(
                         userId,
                         dreamId
+                )
+        );
+    }
+
+    @GetMapping("/gallery")
+    public ResponseEntity<DreamGalleryResponse> getGallery(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(required = false) Integer size
+    ) {
+        Long userId =
+                Long.valueOf(
+                        jwt.getSubject()
+                );
+
+        return ResponseEntity.ok(
+                dreamGalleryService.getGallery(
+                        userId,
+                        cursor,
+                        size
                 )
         );
     }
