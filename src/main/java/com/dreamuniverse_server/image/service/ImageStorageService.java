@@ -6,8 +6,14 @@ import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
+
+import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
@@ -15,7 +21,11 @@ public class ImageStorageService {
 
     private static final String CONTENT_TYPE = "image/png";
 
+    private static final Duration PRESIGNED_GET_DURATION =
+            Duration.ofMinutes(30);
+
     private final S3Client r2S3Client;
+    private final S3Presigner r2S3Presigner;
     private final R2Properties r2Properties;
 
     public String upload(
@@ -51,6 +61,39 @@ public class ImageStorageService {
                     e
             );
         }
+    }
+
+    public String generatePresignedGetUrl(
+            String imageKey
+    ) {
+        validateImageKey(imageKey);
+
+        GetObjectRequest getObjectRequest =
+                GetObjectRequest.builder()
+                        .bucket(
+                                r2Properties.bucketName()
+                        )
+                        .key(imageKey)
+                        .build();
+
+        GetObjectPresignRequest presignRequest =
+                GetObjectPresignRequest.builder()
+                        .signatureDuration(
+                                PRESIGNED_GET_DURATION
+                        )
+                        .getObjectRequest(
+                                getObjectRequest
+                        )
+                        .build();
+
+        PresignedGetObjectRequest presignedRequest =
+                r2S3Presigner.presignGetObject(
+                        presignRequest
+                );
+
+        return presignedRequest
+                .url()
+                .toString();
     }
 
     public void delete(
