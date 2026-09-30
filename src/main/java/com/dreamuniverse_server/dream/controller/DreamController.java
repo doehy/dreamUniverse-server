@@ -2,10 +2,8 @@ package com.dreamuniverse_server.dream.controller;
 
 import com.dreamuniverse_server.dream.dto.request.DreamCreateRequest;
 import com.dreamuniverse_server.dream.dto.request.DreamUpdateRequest;
-import com.dreamuniverse_server.dream.dto.response.DreamGalleryResponse;
-import com.dreamuniverse_server.dream.dto.response.DreamResponse;
-import com.dreamuniverse_server.dream.dto.response.DreamAnalysisResponse;
-import com.dreamuniverse_server.dream.dto.response.DreamAiUsageResponse;
+import com.dreamuniverse_server.dream.dto.response.*;
+import com.dreamuniverse_server.dream.service.DreamDetailService;
 import com.dreamuniverse_server.dream.service.DreamGalleryService;
 import com.dreamuniverse_server.dream.service.DreamService;
 import jakarta.validation.Valid;
@@ -25,6 +23,7 @@ public class DreamController {
 
     private final DreamService dreamService;
     private final DreamGalleryService dreamGalleryService;
+    private final DreamDetailService dreamDetailService;
 
     /**
      * 꿈 작성
@@ -140,6 +139,9 @@ public class DreamController {
         );
     }
 
+    /**
+     * 꿈그림 커서 방식으로 조회
+     */
     @GetMapping("/gallery")
     public ResponseEntity<DreamGalleryResponse> getGallery(
             @AuthenticationPrincipal Jwt jwt,
@@ -156,6 +158,27 @@ public class DreamController {
                         userId,
                         cursor,
                         size
+                )
+        );
+    }
+
+    /**
+     * 꿈 상세화면 조회
+     */
+    @GetMapping("/{dreamId}/detail")
+    public ResponseEntity<DreamDetailResponse> getDreamDetail(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long dreamId
+    ) {
+        Long userId =
+                Long.valueOf(
+                        jwt.getSubject()
+                );
+
+        return ResponseEntity.ok(
+                dreamDetailService.getDetail(
+                        userId,
+                        dreamId
                 )
         );
     }
