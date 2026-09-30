@@ -10,8 +10,8 @@ import org.springframework.data.repository.query.Param;
 public interface SignupSessionRepository extends JpaRepository<SignupSession, Long> {
     @Modifying
     @Query(value = """
-            INSERT INTO auth_signup_sessions (provider, provider_user_id, token_hash, email, name, expires_at)
-            VALUES (:provider, :providerUserId, :hash, :email, :name, :expiresAt)
+            INSERT INTO auth_signup_sessions (provider, provider_user_id, token_hash, email, name, expires_at, created_at)
+            VALUES (:provider, :providerUserId, :hash, :email, :name, :expiresAt, UTC_TIMESTAMP(6))
             ON DUPLICATE KEY UPDATE token_hash = :hash, email = :email, name = :name,
                                     expires_at = :expiresAt, consumed_at = NULL
             """, nativeQuery = true)
