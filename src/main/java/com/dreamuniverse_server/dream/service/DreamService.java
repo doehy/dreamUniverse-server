@@ -64,7 +64,10 @@ public class DreamService {
                 user,
                 request.title(),
                 request.content(),
-                request.dreamDate()
+                request.dreamDate(),
+                request.sleepParalysis(),
+                request.nightmare(),
+                request.lucidDream()
         );
 
         if (request.aiRequested()) {
@@ -120,9 +123,12 @@ public class DreamService {
         // 사용자가 수정한 원문부터 먼저 저장한다.
         Dream dream = dreamCommandService.update(
                 dreamId,
-                user.getId(),
+                userId,
                 request.title(),
-                request.content()
+                request.content(),
+                request.sleepParalysis(),
+                request.nightmare(),
+                request.lucidDream()
         );
 
         if (request.aiRequested()) {

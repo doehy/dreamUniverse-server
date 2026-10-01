@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+
 @Service
 @RequiredArgsConstructor
 public class DreamCommandService {
@@ -20,13 +22,19 @@ public class DreamCommandService {
             User user,
             String title,
             String content,
-            java.time.LocalDate dreamDate
+            LocalDate dreamDate,
+            boolean sleepParalysis,
+            boolean nightmare,
+            boolean lucidDream
     ) {
         Dream dream = Dream.create(
                 user,
                 title,
                 content,
-                dreamDate
+                dreamDate,
+                sleepParalysis,
+                nightmare,
+                lucidDream
         );
 
         return dreamRepository.save(dream);
@@ -37,7 +45,10 @@ public class DreamCommandService {
             Long dreamId,
             Long userId,
             String title,
-            String content
+            String content,
+            boolean sleepParalysis,
+            boolean nightmare,
+            boolean lucidDream
     ) {
         Dream dream = dreamRepository
                 .findByIdAndUserId(dreamId, userId)
@@ -47,7 +58,13 @@ public class DreamCommandService {
                         )
                 );
 
-        dream.update(title, content);
+        dream.update(
+                title,
+                content,
+                sleepParalysis,
+                nightmare,
+                lucidDream
+        );
 
         return dream;
     }

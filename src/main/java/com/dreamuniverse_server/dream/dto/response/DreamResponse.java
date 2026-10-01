@@ -15,6 +15,12 @@ public record DreamResponse(
 
         LocalDate dreamDate,
 
+        boolean sleepParalysis,
+
+        boolean nightmare,
+
+        boolean lucidDream,
+
         String aiStatus,
 
         Instant createdAt,
@@ -31,6 +37,9 @@ public record DreamResponse(
                 dream.getTitle(),
                 dream.getContent(),
                 dream.getDreamDate(),
+                dream.isSleepParalysis(),
+                dream.isNightmare(),
+                dream.isLucidDream(),
                 dream.getAiStatus().name(),
                 dream.getCreatedAt(),
                 dream.getUpdatedAt()

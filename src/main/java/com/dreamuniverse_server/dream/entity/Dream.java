@@ -49,11 +49,23 @@ public class Dream extends BaseTimeEntity {
     @Column(nullable = false, length = 3000)
     private String content;
 
+    @Column(name = "sleep_paralysis", nullable = false)
+    private boolean sleepParalysis;
+
+    @Column(name = "nightmare", nullable = false)
+    private boolean nightmare;
+
+    @Column(name = "lucid_dream", nullable = false)
+    private boolean lucidDream;
+
     public static Dream create(
             User user,
             String title,
             String content,
-            LocalDate dreamDate
+            LocalDate dreamDate,
+            boolean sleepParalysis,
+            boolean nightmare,
+            boolean lucidDream
     ) {
         Dream dream = new Dream();
 
@@ -61,6 +73,11 @@ public class Dream extends BaseTimeEntity {
         dream.title = title;
         dream.content = content;
         dream.dreamDate = dreamDate;
+
+        dream.sleepParalysis = sleepParalysis;
+        dream.nightmare = nightmare;
+        dream.lucidDream = lucidDream;
+
         dream.aiStatus = DreamAiStatus.NOT_REQUESTED;
 
         return dream;
@@ -68,10 +85,17 @@ public class Dream extends BaseTimeEntity {
 
     public void update(
             String title,
-            String content
+            String content,
+            boolean sleepParalysis,
+            boolean nightmare,
+            boolean lucidDream
     ) {
         this.title = title;
         this.content = content;
+
+        this.sleepParalysis = sleepParalysis;
+        this.nightmare = nightmare;
+        this.lucidDream = lucidDream;
     }
 
     public void startAiCompletion() {

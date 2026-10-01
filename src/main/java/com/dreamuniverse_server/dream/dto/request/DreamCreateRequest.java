@@ -21,6 +21,15 @@ public record DreamCreateRequest(
         @PastOrPresent
         LocalDate dreamDate,
 
+        @NotNull
+        Boolean sleepParalysis,
+
+        @NotNull
+        Boolean nightmare,
+
+        @NotNull
+        Boolean lucidDream,
+
         boolean aiRequested
 ) {
 }
