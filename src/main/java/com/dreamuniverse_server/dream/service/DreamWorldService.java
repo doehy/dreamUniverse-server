@@ -1,10 +1,13 @@
 package com.dreamuniverse_server.dream.service;
 
 import com.dreamuniverse_server.dream.dto.response.DreamWorldElementResponse;
+import com.dreamuniverse_server.dream.dto.response.DreamWorldRandomElementResponse;
+import com.dreamuniverse_server.dream.dto.response.DreamWorldRandomResponse;
 import com.dreamuniverse_server.dream.dto.response.DreamWorldResponse;
 import com.dreamuniverse_server.dream.entity.DreamElementType;
 import com.dreamuniverse_server.dream.repository.DreamElementRepository;
 import com.dreamuniverse_server.dream.repository.projection.DreamWorldElementProjection;
+import com.dreamuniverse_server.dream.repository.projection.DreamWorldRandomElementProjection;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -17,6 +20,7 @@ import java.util.List;
 public class DreamWorldService {
 
     private static final int MAX_ELEMENTS_PER_TYPE = 5;
+    private static final int RANDOM_ELEMENT_COUNT = 12;
 
     private final DreamElementRepository dreamElementRepository;
 
@@ -45,6 +49,38 @@ public class DreamWorldService {
                 people,
                 places,
                 symbols
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public DreamWorldRandomResponse getRandomWorld(Long userId) {
+
+        List<DreamWorldRandomElementResponse> elements =
+                dreamElementRepository
+                        .findRandomElements(
+                                userId,
+                                PageRequest.of(
+                                        0,
+                                        RANDOM_ELEMENT_COUNT
+                                )
+                        )
+                        .stream()
+                        .map(this::toRandomResponse)
+                        .toList();
+
+        return new DreamWorldRandomResponse(elements);
+    }
+
+    private DreamWorldRandomElementResponse toRandomResponse(
+            DreamWorldRandomElementProjection projection
+    ) {
+
+        return DreamWorldRandomElementResponse.of(
+                DreamElementType.valueOf(
+                        projection.getElementType()
+                ),
+                projection.getElementValue(),
+                projection.getAppearanceCount()
         );
     }
 

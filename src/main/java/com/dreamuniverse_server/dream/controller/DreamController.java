@@ -201,4 +201,16 @@ public class DreamController {
                 )
         );
     }
+
+    @GetMapping("/world/random")
+    public ResponseEntity<DreamWorldRandomResponse> getRandomDreamWorld(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+
+        Long userId = Long.valueOf(jwt.getSubject());
+
+        return ResponseEntity.ok(
+                dreamWorldService.getRandomWorld(userId)
+        );
+    }
 }
