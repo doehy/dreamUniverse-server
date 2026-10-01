@@ -3,6 +3,7 @@ package com.dreamuniverse_server.dream.repository;
 import com.dreamuniverse_server.dream.entity.DreamElement;
 import com.dreamuniverse_server.dream.entity.DreamElementType;
 import com.dreamuniverse_server.dream.repository.projection.DreamWorldElementProjection;
+import com.dreamuniverse_server.dream.repository.projection.DreamWorldRandomDreamProjection;
 import com.dreamuniverse_server.dream.repository.projection.DreamWorldRandomElementProjection;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface DreamElementRepository
         extends JpaRepository<DreamElement, Long> {
@@ -59,5 +61,39 @@ public interface DreamElementRepository
     List<DreamWorldRandomElementProjection> findRandomElements(
             @Param("userId") Long userId,
             Pageable pageable
+    );
+
+    @Query(
+            value = """
+                    select
+                        d.id as dreamId,
+                        d.dream_date as dreamDate,
+                        d.title as title
+                    from dream_elements de
+                    join dream_analyses da
+                        on da.id = de.analysis_id
+                    join dreams d
+                        on d.id = da.dream_id
+                    where d.user_id = :userId
+                      and de.element_type = :elementType
+                      and de.element_value = :elementValue
+                      and (
+                            :excludeDreamId is null
+                            or d.id <> :excludeDreamId
+                      )
+                    group by
+                        d.id,
+                        d.dream_date,
+                        d.title
+                    order by rand()
+                    limit 1
+                    """,
+            nativeQuery = true
+    )
+    Optional<DreamWorldRandomDreamProjection> findRandomDreamByElement(
+            @Param("userId") Long userId,
+            @Param("elementType") String elementType,
+            @Param("elementValue") String elementValue,
+            @Param("excludeDreamId") Long excludeDreamId
     );
 }

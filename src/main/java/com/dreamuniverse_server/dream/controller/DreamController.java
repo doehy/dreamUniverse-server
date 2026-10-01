@@ -3,6 +3,7 @@ package com.dreamuniverse_server.dream.controller;
 import com.dreamuniverse_server.dream.dto.request.DreamCreateRequest;
 import com.dreamuniverse_server.dream.dto.request.DreamUpdateRequest;
 import com.dreamuniverse_server.dream.dto.response.*;
+import com.dreamuniverse_server.dream.entity.DreamElementType;
 import com.dreamuniverse_server.dream.service.DreamDetailService;
 import com.dreamuniverse_server.dream.service.DreamGalleryService;
 import com.dreamuniverse_server.dream.service.DreamService;
@@ -211,6 +212,26 @@ public class DreamController {
 
         return ResponseEntity.ok(
                 dreamWorldService.getRandomWorld(userId)
+        );
+    }
+
+    @GetMapping("/world/elements/random-dream")
+    public ResponseEntity<DreamWorldRandomDreamResponse> getRandomDreamByElement(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam DreamElementType type,
+            @RequestParam String name,
+            @RequestParam(required = false) Long excludeDreamId
+    ) {
+
+        Long userId = Long.valueOf(jwt.getSubject());
+
+        return ResponseEntity.ok(
+                dreamWorldService.getRandomDream(
+                        userId,
+                        type,
+                        name,
+                        excludeDreamId
+                )
         );
     }
 }

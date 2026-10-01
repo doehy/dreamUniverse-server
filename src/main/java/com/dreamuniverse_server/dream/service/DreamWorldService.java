@@ -1,13 +1,18 @@
 package com.dreamuniverse_server.dream.service;
 
+import com.dreamuniverse_server.dream.dto.response.DreamDetailImageResponse;
 import com.dreamuniverse_server.dream.dto.response.DreamWorldElementResponse;
+import com.dreamuniverse_server.dream.dto.response.DreamWorldRandomDreamResponse;
 import com.dreamuniverse_server.dream.dto.response.DreamWorldRandomElementResponse;
 import com.dreamuniverse_server.dream.dto.response.DreamWorldRandomResponse;
 import com.dreamuniverse_server.dream.dto.response.DreamWorldResponse;
 import com.dreamuniverse_server.dream.entity.DreamElementType;
 import com.dreamuniverse_server.dream.repository.DreamElementRepository;
+import com.dreamuniverse_server.dream.repository.DreamImageRepository;
 import com.dreamuniverse_server.dream.repository.projection.DreamWorldElementProjection;
+import com.dreamuniverse_server.dream.repository.projection.DreamWorldRandomDreamProjection;
 import com.dreamuniverse_server.dream.repository.projection.DreamWorldRandomElementProjection;
+import com.dreamuniverse_server.image.service.ImageStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -23,27 +28,20 @@ public class DreamWorldService {
     private static final int RANDOM_ELEMENT_COUNT = 12;
 
     private final DreamElementRepository dreamElementRepository;
+    private final DreamImageRepository dreamImageRepository;
+    private final ImageStorageService imageStorageService;
 
     @Transactional(readOnly = true)
     public DreamWorldResponse getWorld(Long userId) {
 
         List<DreamWorldElementResponse> people =
-                getTopElements(
-                        userId,
-                        DreamElementType.PERSON
-                );
+                getTopElements(userId, DreamElementType.PERSON);
 
         List<DreamWorldElementResponse> places =
-                getTopElements(
-                        userId,
-                        DreamElementType.PLACE
-                );
+                getTopElements(userId, DreamElementType.PLACE);
 
         List<DreamWorldElementResponse> symbols =
-                getTopElements(
-                        userId,
-                        DreamElementType.OBJECT
-                );
+                getTopElements(userId, DreamElementType.OBJECT);
 
         return new DreamWorldResponse(
                 people,
@@ -71,16 +69,50 @@ public class DreamWorldService {
         return new DreamWorldRandomResponse(elements);
     }
 
-    private DreamWorldRandomElementResponse toRandomResponse(
-            DreamWorldRandomElementProjection projection
+    @Transactional(readOnly = true)
+    public DreamWorldRandomDreamResponse getRandomDream(
+            Long userId,
+            DreamElementType elementType,
+            String elementValue,
+            Long excludeDreamId
     ) {
 
-        return DreamWorldRandomElementResponse.of(
-                DreamElementType.valueOf(
-                        projection.getElementType()
-                ),
-                projection.getElementValue(),
-                projection.getAppearanceCount()
+        DreamWorldRandomDreamProjection dream =
+                dreamElementRepository
+                        .findRandomDreamByElement(
+                                userId,
+                                elementType.name(),
+                                elementValue,
+                                excludeDreamId
+                        )
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "해당 요소가 포함된 꿈을 찾을 수 없습니다."
+                                )
+                        );
+
+        List<DreamDetailImageResponse> images =
+                dreamImageRepository
+                        .findAllByDreamIdOrderByImageOrderAsc(
+                                dream.getDreamId()
+                        )
+                        .stream()
+                        .map(image ->
+                                new DreamDetailImageResponse(
+                                        image.getImageOrder(),
+                                        imageStorageService
+                                                .generatePresignedGetUrl(
+                                                        image.getImageKey()
+                                                )
+                                )
+                        )
+                        .toList();
+
+        return new DreamWorldRandomDreamResponse(
+                dream.getDreamId(),
+                dream.getDreamDate(),
+                dream.getTitle(),
+                images
         );
     }
 
@@ -93,7 +125,10 @@ public class DreamWorldService {
                 .findTopElements(
                         userId,
                         elementType,
-                        PageRequest.of(0, MAX_ELEMENTS_PER_TYPE)
+                        PageRequest.of(
+                                0,
+                                MAX_ELEMENTS_PER_TYPE
+                        )
                 )
                 .stream()
                 .map(this::toResponse)
@@ -105,6 +140,19 @@ public class DreamWorldService {
     ) {
 
         return DreamWorldElementResponse.of(
+                projection.getElementValue(),
+                projection.getAppearanceCount()
+        );
+    }
+
+    private DreamWorldRandomElementResponse toRandomResponse(
+            DreamWorldRandomElementProjection projection
+    ) {
+
+        return DreamWorldRandomElementResponse.of(
+                DreamElementType.valueOf(
+                        projection.getElementType()
+                ),
                 projection.getElementValue(),
                 projection.getAppearanceCount()
         );
