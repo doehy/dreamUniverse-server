@@ -6,6 +6,7 @@ import com.dreamuniverse_server.dream.dto.response.*;
 import com.dreamuniverse_server.dream.service.DreamDetailService;
 import com.dreamuniverse_server.dream.service.DreamGalleryService;
 import com.dreamuniverse_server.dream.service.DreamService;
+import com.dreamuniverse_server.dream.service.DreamWorldService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,6 +25,7 @@ public class DreamController {
     private final DreamService dreamService;
     private final DreamGalleryService dreamGalleryService;
     private final DreamDetailService dreamDetailService;
+    private final DreamWorldService dreamWorldService;
 
     /**
      * 꿈 작성
@@ -179,6 +181,23 @@ public class DreamController {
                 dreamDetailService.getDetail(
                         userId,
                         dreamId
+                )
+        );
+    }
+
+    @GetMapping("/world")
+    public ResponseEntity<DreamWorldResponse> getDreamWorld(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+
+        Long userId =
+                Long.valueOf(
+                        jwt.getSubject()
+                );
+
+        return ResponseEntity.ok(
+                dreamWorldService.getWorld(
+                        userId
                 )
         );
     }
