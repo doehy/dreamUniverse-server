@@ -5,11 +5,13 @@ import com.dreamuniverse_server.dream.entity.DreamElementType;
 import com.dreamuniverse_server.dream.repository.projection.DreamWorldElementProjection;
 import com.dreamuniverse_server.dream.repository.projection.DreamWorldRandomDreamProjection;
 import com.dreamuniverse_server.dream.repository.projection.DreamWorldRandomElementProjection;
+import com.dreamuniverse_server.dream.statistics.repository.projection.DreamStatisticsElementProjection;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -95,5 +97,44 @@ public interface DreamElementRepository
             @Param("elementType") String elementType,
             @Param("elementValue") String elementValue,
             @Param("excludeDreamId") Long excludeDreamId
+    );
+
+    @Query(
+            value = """
+                select
+                    de.element_type as elementType,
+                    de.element_value as elementValue,
+                    count(distinct d.id) as appearanceCount
+
+                from dream_elements de
+
+                join dream_analyses da
+                    on da.id = de.analysis_id
+
+                join dreams d
+                    on d.id = da.dream_id
+
+                where d.user_id = :userId
+                  and d.dream_date between :startDate and :endDate
+                  and de.element_type in (
+                      'PERSON',
+                      'PLACE',
+                      'OBJECT'
+                  )
+
+                group by
+                    de.element_type,
+                    de.element_value
+
+                order by
+                    count(distinct d.id) desc
+                """,
+            nativeQuery = true
+    )
+    List<DreamStatisticsElementProjection> findTopStatisticsElements(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            Pageable pageable
     );
 }
