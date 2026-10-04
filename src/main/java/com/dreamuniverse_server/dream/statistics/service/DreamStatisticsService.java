@@ -7,6 +7,7 @@ import com.dreamuniverse_server.dream.repository.DreamRepository;
 import com.dreamuniverse_server.dream.statistics.dto.response.DreamEmotionStatisticsResponse;
 import com.dreamuniverse_server.dream.statistics.dto.response.DreamExperienceStatisticsResponse;
 import com.dreamuniverse_server.dream.statistics.dto.response.DreamMonthlyEmotionTrendResponse;
+import com.dreamuniverse_server.dream.statistics.dto.response.DreamProfileResponse;
 import com.dreamuniverse_server.dream.statistics.dto.response.DreamRecentStatisticsResponse;
 import com.dreamuniverse_server.dream.statistics.dto.response.DreamStatisticsElementResponse;
 import com.dreamuniverse_server.dream.statistics.dto.response.DreamYearlyStatisticsResponse;
@@ -41,14 +42,18 @@ public class DreamStatisticsService {
     private final DreamEmotionRepository dreamEmotionRepository;
     private final DreamElementRepository dreamElementRepository;
     private final UserRepository userRepository;
+    private final DreamProfileService dreamProfileService;
     private final Clock clock;
 
     @Transactional(readOnly = true)
     public DreamRecentStatisticsResponse getRecentStatistics(
             Long userId
     ) {
-        LocalDate endDate = getUserToday(userId);
-        LocalDate startDate = endDate.minusDays(29);
+        LocalDate endDate =
+                getUserToday(userId);
+
+        LocalDate startDate =
+                endDate.minusDays(29);
 
         CommonStatistics statistics =
                 getCommonStatistics(
@@ -57,10 +62,19 @@ public class DreamStatisticsService {
                         endDate
                 );
 
+        DreamProfileResponse dreamProfile =
+                createDreamProfile(
+                        userId,
+                        startDate,
+                        endDate,
+                        statistics.dreamCount()
+                );
+
         return new DreamRecentStatisticsResponse(
                 startDate,
                 endDate,
                 statistics.dreamCount(),
+                dreamProfile,
                 statistics.sleepParalysis(),
                 statistics.nightmare(),
                 statistics.lucidDream(),
@@ -75,7 +89,8 @@ public class DreamStatisticsService {
             Long userId,
             int year
     ) {
-        LocalDate today = getUserToday(userId);
+        LocalDate today =
+                getUserToday(userId);
 
         LocalDate startDate =
                 LocalDate.of(
@@ -98,6 +113,14 @@ public class DreamStatisticsService {
                         endDate
                 );
 
+        DreamProfileResponse dreamProfile =
+                createDreamProfile(
+                        userId,
+                        startDate,
+                        endDate,
+                        statistics.dreamCount()
+                );
+
         List<DreamMonthlyEmotionTrendResponse> monthlyTrend =
                 getMonthlyTrend(
                         userId,
@@ -110,6 +133,7 @@ public class DreamStatisticsService {
         return new DreamYearlyStatisticsResponse(
                 year,
                 statistics.dreamCount(),
+                dreamProfile,
                 statistics.sleepParalysis(),
                 statistics.nightmare(),
                 statistics.lucidDream(),
@@ -198,6 +222,23 @@ public class DreamStatisticsService {
                 dominantEmotion,
                 emotions,
                 topElements
+        );
+    }
+
+    private DreamProfileResponse createDreamProfile(
+            Long userId,
+            LocalDate startDate,
+            LocalDate endDate,
+            long dreamCount
+    ) {
+        if (dreamCount == 0) {
+            return null;
+        }
+
+        return dreamProfileService.getProfile(
+                userId,
+                startDate,
+                endDate
         );
     }
 

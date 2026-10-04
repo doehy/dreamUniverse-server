@@ -4,24 +4,15 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record DreamRecentStatisticsResponse(
-
         LocalDate startDate,
-
         LocalDate endDate,
-
         long dreamCount,
-
+        DreamProfileResponse dreamProfile,
         DreamExperienceStatisticsResponse sleepParalysis,
-
         DreamExperienceStatisticsResponse nightmare,
-
         DreamExperienceStatisticsResponse lucidDream,
-
         String dominantEmotion,
-
         List<DreamEmotionStatisticsResponse> emotions,
-
         List<DreamStatisticsElementResponse> topElements
-
 ) {
 }

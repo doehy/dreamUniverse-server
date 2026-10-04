@@ -10,8 +10,16 @@ import java.util.List;
 public class DreamAnalysisResult {
 
     private String interpretation;
+
     private List<EmotionResult> emotions;
+
     private List<ElementResult> elements;
+
+    private int symbolismScore;
+
+    private int dynamismScore;
+
+    private int fantasyScore;
 
     @Getter
     public static class EmotionResult {

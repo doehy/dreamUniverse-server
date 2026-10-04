@@ -23,51 +23,73 @@ public class DreamAnalysisService {
     private final DreamEmotionRepository dreamEmotionRepository;
     private final DreamElementRepository dreamElementRepository;
 
-    public DreamAnalysis saveAnalysis(Dream dream, DreamAnalysisResult result) {
-        DreamAnalysis analysis = dreamAnalysisRepository.findByDreamId(dream.getId())
-                .map(existing -> {
-                    existing.update(
-                            result.getInterpretation()
-                    );
-                    return existing;
-                })
-                .orElseGet(() ->
-                        dreamAnalysisRepository.save(
-                                DreamAnalysis.create(
-                                        dream,
-                                        result.getInterpretation()
+    public DreamAnalysis saveAnalysis(
+            Dream dream,
+            DreamAnalysisResult result
+    ) {
+        DreamAnalysis analysis =
+                dreamAnalysisRepository.findByDreamId(dream.getId())
+                        .map(existing -> {
+                            existing.update(
+                                    result.getInterpretation(),
+                                    result.getSymbolismScore(),
+                                    result.getDynamismScore(),
+                                    result.getFantasyScore()
+                            );
+
+                            return existing;
+                        })
+                        .orElseGet(() ->
+                                dreamAnalysisRepository.save(
+                                        DreamAnalysis.create(
+                                                dream,
+                                                result.getInterpretation(),
+                                                result.getSymbolismScore(),
+                                                result.getDynamismScore(),
+                                                result.getFantasyScore()
+                                        )
+                                )
+                        );
+
+        dreamEmotionRepository.deleteAllByAnalysisId(
+                analysis.getId()
+        );
+
+        dreamElementRepository.deleteAllByAnalysisId(
+                analysis.getId()
+        );
+
+        List<DreamEmotion> emotions =
+                result.getEmotions()
+                        .stream()
+                        .map(emotion ->
+                                DreamEmotion.create(
+                                        analysis,
+                                        emotion.getType(),
+                                        emotion.getScore()
                                 )
                         )
-                );
+                        .toList();
 
-        dreamEmotionRepository.deleteAllByAnalysisId(analysis.getId());
-        dreamElementRepository.deleteAllByAnalysisId(analysis.getId());
+        dreamEmotionRepository.saveAll(
+                emotions
+        );
 
-        List<DreamEmotion> emotions = result.getEmotions()
-                .stream()
-                .map(emotion ->
-                        DreamEmotion.create(
-                                analysis,
-                                emotion.getType(),
-                                emotion.getScore()
+        List<DreamElement> elements =
+                result.getElements()
+                        .stream()
+                        .map(element ->
+                                DreamElement.create(
+                                        analysis,
+                                        element.getType(),
+                                        element.getValue()
+                                )
                         )
-                )
-                .toList();
+                        .toList();
 
-        dreamEmotionRepository.saveAll(emotions);
-
-        List<DreamElement> elements = result.getElements()
-                .stream()
-                .map(element ->
-                        DreamElement.create(
-                                analysis,
-                                element.getType(),
-                                element.getValue()
-                        )
-                )
-                .toList();
-
-        dreamElementRepository.saveAll(elements);
+        dreamElementRepository.saveAll(
+                elements
+        );
 
         return analysis;
     }
