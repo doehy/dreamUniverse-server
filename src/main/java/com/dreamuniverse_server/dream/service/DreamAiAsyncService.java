@@ -26,7 +26,6 @@ public class DreamAiAsyncService {
     private final DreamAiStatusService dreamAiStatusService;
     private final DreamAiUsageService dreamAiUsageService;
 
-
     @Async("dreamAiExecutor")
     public void complete(
             Long userId,
@@ -36,33 +35,55 @@ public class DreamAiAsyncService {
     ) {
         String newImageKey = null;
 
+        log.info(
+                "[Dream AI] START userId={}, dreamId={}",
+                userId,
+                dreamId
+        );
+
         try {
+            log.info(
+                    "[Dream AI] User load START dreamId={}",
+                    dreamId
+            );
+
             User user =
                     userRepository.findById(userId)
                             .orElseThrow();
 
+            log.info(
+                    "[Dream AI] User load COMPLETED dreamId={}",
+                    dreamId
+            );
+
 
             /*
              * OpenAI 텍스트 분석
-             *
-             * AI 요청 당시 전달받은 content를 사용한다.
              */
+            log.info(
+                    "[Dream AI] Text analysis START dreamId={}",
+                    dreamId
+            );
+
             DreamAnalysisResult analysisResult =
                     dreamAiClient.analyze(
                             content
                     );
 
+            log.info(
+                    "[Dream AI] Text analysis COMPLETED dreamId={}",
+                    dreamId
+            );
+
 
             /*
-             * OpenAI 이미지 생성
-             * +
-             * R2 업로드
-             *
-             * 이미지 역시 AI 요청 당시의 content를 사용한다.
-             *
-             * 따라서 비동기 처리 중 사용자가 꿈 내용을 수정해도
-             * 텍스트 분석과 이미지가 서로 다른 내용을 바라보지 않는다.
+             * OpenAI 이미지 생성 + R2 업로드
              */
+            log.info(
+                    "[Dream AI] Image generation/upload START dreamId={}",
+                    dreamId
+            );
+
             newImageKey =
                     dreamImageService.generateAndUpload(
                             user,
@@ -70,19 +91,22 @@ public class DreamAiAsyncService {
                             content
                     );
 
+            log.info(
+                    "[Dream AI] Image generation/upload COMPLETED dreamId={}, imageKey={}",
+                    dreamId,
+                    newImageKey
+            );
+
 
             /*
-             * 짧은 DB Transaction
-             *
-             * - 해몽 저장
-             * - 감정 저장
-             * - 요소 저장
-             * - DreamImage 저장
-             * - aiStatus = COMPLETED
-             *
-             * 실제 이미지 DB 저장은
-             * DreamImagePersistenceService가 담당한다.
+             * 분석 / 이미지 DB 저장
+             * + COMPLETED 상태 변경
              */
+            log.info(
+                    "[Dream AI] DB completion START dreamId={}",
+                    dreamId
+            );
+
             List<String> oldImageKeys =
                     dreamAiCompletionService.complete(
                             dreamId,
@@ -90,22 +114,40 @@ public class DreamAiAsyncService {
                             newImageKey
                     );
 
+            log.info(
+                    "[Dream AI] DB completion COMPLETED dreamId={}",
+                    dreamId
+            );
+
 
             /*
-             * DB가 새로운 이미지로 정상 전환된 뒤
-             * 이전 R2 이미지를 정리한다.
-             *
-             * 기존 이미지 삭제 실패는
-             * AI 완료 자체의 실패로 처리하지 않는다.
+             * 기존 R2 이미지 정리
              */
+            log.info(
+                    "[Dream AI] Old image cleanup START dreamId={}, count={}",
+                    dreamId,
+                    oldImageKeys.size()
+            );
+
             dreamImageService.deleteOldImages(
                     oldImageKeys
+            );
+
+            log.info(
+                    "[Dream AI] Old image cleanup COMPLETED dreamId={}",
+                    dreamId
+            );
+
+            log.info(
+                    "[Dream AI] COMPLETED userId={}, dreamId={}",
+                    userId,
+                    dreamId
             );
 
         } catch (RuntimeException e) {
 
             log.error(
-                    "Dream AI completion failed. userId={}, dreamId={}",
+                    "[Dream AI] FAILED userId={}, dreamId={}",
                     userId,
                     dreamId,
                     e
@@ -113,28 +155,50 @@ public class DreamAiAsyncService {
 
 
             /*
-             * 이미지 생성 + R2 업로드까지 성공했지만
-             * 이후 DB Transaction에서 실패했다면
-             * 새로 업로드한 R2 파일이 orphan이 되므로 삭제한다.
+             * R2에는 올라갔는데 DB 반영 전에 실패한 경우
              */
             if (newImageKey != null) {
-                dreamImageService.deleteUploadedImage(
-                        newImageKey
-                );
+
+                try {
+                    dreamImageService.deleteUploadedImage(
+                            newImageKey
+                    );
+
+                } catch (RuntimeException deleteException) {
+
+                    log.error(
+                            "[Dream AI] Uploaded image cleanup FAILED. dreamId={}, imageKey={}",
+                            dreamId,
+                            newImageKey,
+                            deleteException
+                    );
+                }
             }
 
 
             /*
-             * AI 처리 상태를 FAILED로 변경한다.
+             * FAILED 상태 변경
              */
             try {
+
+                log.info(
+                        "[Dream AI] Mark FAILED START dreamId={}",
+                        dreamId
+                );
+
                 dreamAiStatusService.markFailed(
                         dreamId
                 );
 
+                log.info(
+                        "[Dream AI] Mark FAILED COMPLETED dreamId={}",
+                        dreamId
+                );
+
             } catch (RuntimeException statusException) {
+
                 log.error(
-                        "Failed to mark dream AI status as FAILED. dreamId={}",
+                        "[Dream AI] Failed to mark AI status as FAILED. dreamId={}",
                         dreamId,
                         statusException
                 );
@@ -142,19 +206,28 @@ public class DreamAiAsyncService {
 
 
             /*
-             * AI 작업이 실패했으므로
-             * 차감했던 일일 AI 사용 횟수를 복구한다.
+             * AI 사용 횟수 복구
              */
             try {
+
                 dreamAiUsageService.release(
                         userId,
                         usageDate
                 );
 
-            } catch (RuntimeException releaseException) {
-                log.error(
-                        "AI usage release failed. userId={}, usageDate={}",
+                log.info(
+                        "[Dream AI] Usage released. userId={}, dreamId={}, usageDate={}",
                         userId,
+                        dreamId,
+                        usageDate
+                );
+
+            } catch (RuntimeException releaseException) {
+
+                log.error(
+                        "[Dream AI] AI usage release FAILED. userId={}, dreamId={}, usageDate={}",
+                        userId,
+                        dreamId,
                         usageDate,
                         releaseException
                 );
