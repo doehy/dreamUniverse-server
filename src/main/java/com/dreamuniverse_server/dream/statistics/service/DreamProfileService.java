@@ -5,6 +5,7 @@ import com.dreamuniverse_server.dream.statistics.dto.response.DreamProfileRespon
 import com.dreamuniverse_server.dream.statistics.dto.response.DreamTypeResponse;
 import com.dreamuniverse_server.dream.statistics.type.DreamType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,9 @@ public class DreamProfileService {
 
     private final DreamDnaService dreamDnaService;
     private final DreamTypeService dreamTypeService;
+
+    @Value("${dream-assets.base-url}")
+    private String dreamAssetsBaseUrl;
 
     public DreamProfileResponse getProfile(
             Long userId,
@@ -37,7 +41,8 @@ public class DreamProfileService {
 
         return new DreamProfileResponse(
                 DreamTypeResponse.from(
-                        dreamType
+                        dreamType,
+                        dreamAssetsBaseUrl
                 ),
                 dna
         );
