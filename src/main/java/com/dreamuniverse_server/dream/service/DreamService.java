@@ -30,6 +30,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DreamService {
 
+    private static final int DAILY_DREAM_LIMIT = 3;
+
     private final DreamRepository dreamRepository;
     private final DreamAnalysisRepository dreamAnalysisRepository;
     private final DreamEmotionRepository dreamEmotionRepository;
@@ -49,12 +51,14 @@ public class DreamService {
     ) {
         User user = getUser(userId);
 
-        if (dreamRepository.existsByUserIdAndDreamDate(
+        long dreamCount = dreamRepository.countByUserIdAndDreamDate(
                 user.getId(),
                 request.dreamDate()
-        )) {
+        );
+
+        if (dreamCount >= DAILY_DREAM_LIMIT) {
             throw new CustomException(
-                    ErrorCode.DREAM_ALREADY_EXISTS
+                    ErrorCode.DREAM_DAILY_LIMIT_EXCEEDED
             );
         }
 

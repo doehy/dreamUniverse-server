@@ -12,7 +12,7 @@ import java.util.Optional;
 
 public interface DreamRepository extends JpaRepository<Dream, Long> {
 
-    boolean existsByUserIdAndDreamDate(
+    long countByUserIdAndDreamDate(
             Long userId,
             LocalDate dreamDate
     );

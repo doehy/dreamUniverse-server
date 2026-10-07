@@ -12,10 +12,10 @@ import java.time.LocalDate;
 @Entity
 @Table(
         name = "dreams",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_dreams_user_date",
-                        columnNames = {"user_id", "dream_date"}
+        indexes = {
+                @Index(
+                        name = "idx_dreams_user_date",
+                        columnList = "user_id, dream_date"
                 )
         }
 )

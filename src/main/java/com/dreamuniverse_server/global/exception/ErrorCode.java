@@ -19,7 +19,8 @@ public enum ErrorCode {
 
     // Dream
     DREAM_NOT_FOUND(HttpStatus.NOT_FOUND, "DREAM_404_1", "꿈을 찾을 수 없습니다."),
-    DREAM_ALREADY_EXISTS(HttpStatus.CONFLICT, "DREAM_409_1", "해당 날짜에 이미 작성한 꿈이 있습니다."),
+    DREAM_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS,
+            "DREAM_429_1", "하루에 작성할 수 있는 꿈은 최대 3개입니다."),
     DREAM_FORBIDDEN(HttpStatus.FORBIDDEN, "DREAM_403_1", "해당 꿈에 접근할 권한이 없습니다."),
     DREAM_AI_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS,"DREAM_429_1","오늘 사용할 수 있는 AI 완성 횟수를 모두 사용했습니다."),
     DREAM_ANALYSIS_NOT_FOUND(HttpStatus.NOT_FOUND,"DREAM_404_2","꿈 분석 결과를 찾을 수 없습니다.");
