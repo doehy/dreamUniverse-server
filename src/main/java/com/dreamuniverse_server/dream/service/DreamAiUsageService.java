@@ -1,6 +1,7 @@
 package com.dreamuniverse_server.dream.service;
 
 import com.dreamuniverse_server.dream.entity.DreamAiUsage;
+import com.dreamuniverse_server.dream.policy.DreamUsagePolicy;
 import com.dreamuniverse_server.dream.repository.DreamAiUsageRepository;
 import com.dreamuniverse_server.global.exception.CustomException;
 import com.dreamuniverse_server.global.exception.ErrorCode;
@@ -17,43 +18,31 @@ import java.time.ZoneId;
 @RequiredArgsConstructor
 public class DreamAiUsageService {
 
-    public static final int FREE_DAILY_LIMIT = 1;
-
     private final DreamAiUsageRepository dreamAiUsageRepository;
+    private final DreamEntitlementService dreamEntitlementService;
 
 
-    /**
-     * AI 사용권 1회를 선점한다.
-     *
-     * 성공하면 실제로 사용한 날짜를 반환한다.
-     */
     @Transactional
     public LocalDate acquire(User user) {
 
         LocalDate usageDate =
                 getCurrentDate(user);
 
-        /*
-         * 오늘 row가 없으면 생성.
-         * UNIQUE(user_id, usage_date)
-         * +
-         * ON DUPLICATE KEY
-         * 로 최초 동시 요청도 처리.
-         */
+        DreamUsagePolicy policy =
+                dreamEntitlementService.getPolicy(
+                        user.getId()
+                );
+
         dreamAiUsageRepository.insertIfAbsent(
                 user.getId(),
                 usageDate
         );
 
-        /*
-         * used_count < limit인 경우에만
-         * DB에서 원자적으로 +1
-         */
         int updatedRows =
                 dreamAiUsageRepository.incrementIfAvailable(
                         user.getId(),
                         usageDate,
-                        FREE_DAILY_LIMIT
+                        policy.dailyAiLimit()
                 );
 
         if (updatedRows == 0) {
@@ -66,10 +55,6 @@ public class DreamAiUsageService {
     }
 
 
-    /**
-     * AI 처리 실패 시
-     * 이미 선점했던 사용 횟수를 반환한다.
-     */
     @Transactional
     public void release(
             Long userId,
@@ -82,14 +67,16 @@ public class DreamAiUsageService {
     }
 
 
-    /**
-     * 사용자의 현지 날짜 기준 남은 횟수 조회
-     */
     @Transactional(readOnly = true)
     public int getRemainingCount(User user) {
 
         LocalDate usageDate =
                 getCurrentDate(user);
+
+        DreamUsagePolicy policy =
+                dreamEntitlementService.getPolicy(
+                        user.getId()
+                );
 
         int usedCount =
                 dreamAiUsageRepository
@@ -101,9 +88,18 @@ public class DreamAiUsageService {
                         .orElse(0);
 
         return Math.max(
-                FREE_DAILY_LIMIT - usedCount,
+                policy.dailyAiLimit() - usedCount,
                 0
         );
+    }
+
+
+    @Transactional(readOnly = true)
+    public int getDailyLimit(User user) {
+
+        return dreamEntitlementService
+                .getPolicy(user.getId())
+                .dailyAiLimit();
     }
 
 

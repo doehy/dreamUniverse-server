@@ -2,9 +2,8 @@ package com.dreamuniverse_server.dream.service;
 
 import com.dreamuniverse_server.dream.client.DreamImageClient;
 import com.dreamuniverse_server.dream.dto.ai.DreamImageResult;
-import com.dreamuniverse_server.dream.entity.Dream;
 import com.dreamuniverse_server.dream.policy.AdultPolicy;
-import com.dreamuniverse_server.dream.policy.SubscriptionPolicy;
+import com.dreamuniverse_server.dream.policy.DreamUsagePolicy;
 import com.dreamuniverse_server.dream.prompt.DreamImagePromptBuilder;
 import com.dreamuniverse_server.image.service.ImageStorageService;
 import com.dreamuniverse_server.user.entity.User;
@@ -23,12 +22,13 @@ import java.util.UUID;
 public class DreamImageService {
 
     private final AdultPolicy adultPolicy;
-    private final SubscriptionPolicy subscriptionPolicy;
+    private final DreamEntitlementService dreamEntitlementService;
 
     private final DreamImagePromptBuilder dreamImagePromptBuilder;
     private final DreamImageClient dreamImageClient;
 
     private final ImageStorageService imageStorageService;
+
 
     public String generateAndUpload(
             User user,
@@ -37,8 +37,13 @@ public class DreamImageService {
     ) {
         boolean adult = isAdult(user);
 
+        DreamUsagePolicy policy =
+                dreamEntitlementService.getPolicy(
+                        user.getId()
+                );
+
         int maxImageCount =
-                subscriptionPolicy.getMaxImageCount(user);
+                policy.maxImageCount();
 
         String prompt =
                 dreamImagePromptBuilder.build(
@@ -65,6 +70,7 @@ public class DreamImageService {
         return imageKey;
     }
 
+
     public void deleteUploadedImage(
             String imageKey
     ) {
@@ -81,6 +87,7 @@ public class DreamImageService {
             );
         }
     }
+
 
     public void deleteOldImages(
             List<String> imageKeys
@@ -101,6 +108,7 @@ public class DreamImageService {
         }
     }
 
+
     private boolean isAdult(
             User user
     ) {
@@ -116,6 +124,7 @@ public class DreamImageService {
                 today
         );
     }
+
 
     private String createImageKey(
             Long dreamId

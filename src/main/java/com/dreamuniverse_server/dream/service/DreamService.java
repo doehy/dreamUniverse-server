@@ -157,9 +157,13 @@ public class DreamService {
                 dreamAiUsageService
                         .getRemainingCount(user);
 
+        int dailyLimit =
+                dreamAiUsageService
+                        .getDailyLimit(user);
+
         return new DreamAiUsageResponse(
                 remainingCount,
-                DreamAiUsageService.FREE_DAILY_LIMIT
+                dailyLimit
         );
     }
 
