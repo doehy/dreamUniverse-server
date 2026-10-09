@@ -3,7 +3,6 @@ package com.dreamuniverse_server.dream.service;
 import com.dreamuniverse_server.dream.client.DreamImageClient;
 import com.dreamuniverse_server.dream.dto.ai.DreamImageResult;
 import com.dreamuniverse_server.dream.policy.AdultPolicy;
-import com.dreamuniverse_server.dream.policy.SubscriptionPolicy;
 import com.dreamuniverse_server.dream.prompt.DreamImagePromptBuilder;
 import com.dreamuniverse_server.image.service.ImageStorageService;
 import com.dreamuniverse_server.user.entity.User;

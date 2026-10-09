@@ -18,12 +18,6 @@ public class DreamAiClient {
     @Value("${openai.text-model}")
     private String textModel;
 
-    @Value("${openai.image-model}")
-    private String imageModel;
-
-    @Value("${openai.image-quality}")
-    private String imageQuality;
-
     public DreamAnalysisResult analyze(String content) {
 
         String prompt = """
