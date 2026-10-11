@@ -2,6 +2,7 @@
 package com.dreamuniverse_server.dream.service;
 
 import com.dreamuniverse_server.dream.entity.Dream;
+import com.dreamuniverse_server.dream.entity.DreamAiStatus;
 import com.dreamuniverse_server.dream.entity.DreamImage;
 import com.dreamuniverse_server.dream.repository.DreamDeletionRepository;
 import com.dreamuniverse_server.dream.repository.DreamImageRepository;
@@ -60,9 +61,7 @@ public class DreamCommandService {
         Dream dream = dreamRepository
                 .findByIdAndUserId(dreamId, userId)
                 .orElseThrow(() ->
-                        new CustomException(
-                                ErrorCode.DREAM_NOT_FOUND
-                        )
+                        new CustomException(ErrorCode.DREAM_NOT_FOUND)
                 );
 
         dream.update(
@@ -79,36 +78,40 @@ public class DreamCommandService {
     @Transactional
     public List<String> delete(Long dreamId, Long userId) {
 
-        // 1. 꿈 존재 및 소유권 확인
-        dreamRepository
+        // 1. 꿈 존재 여부 및 소유권 확인
+        Dream dream = dreamRepository
                 .findByIdAndUserId(dreamId, userId)
                 .orElseThrow(() ->
-                        new CustomException(
-                                ErrorCode.DREAM_NOT_FOUND
-                        )
+                        new CustomException(ErrorCode.DREAM_NOT_FOUND)
                 );
 
-        // 2. R2에서 삭제할 이미지 키 확보
+        // 2. AI 분석 중이라면 삭제 차단
+        if (dream.getAiStatus() == DreamAiStatus.PROCESSING) {
+            throw new CustomException(
+                    ErrorCode.DREAM_AI_PROCESSING
+            );
+        }
+
+        // 3. R2에서 삭제할 이미지 키 확보
         List<String> imageKeys = dreamImageRepository
                 .findAllByDreamIdOrderByImageOrderAsc(dreamId)
                 .stream()
                 .map(DreamImage::getImageKey)
                 .toList();
 
-        // 3. 이미지 레코드 삭제
-        // clearAutomatically로 영속성 컨텍스트 정리
+        // 4. 이미지 DB 레코드 삭제 및 영속성 컨텍스트 정리
         dreamDeletionRepository.deleteImages(dreamId);
 
-        // 4. 분석에 연결된 감정 삭제
+        // 5. 분석에 연결된 감정 삭제
         dreamDeletionRepository.deleteEmotions(dreamId);
 
-        // 5. 분석에 연결된 요소 삭제
+        // 6. 분석에 연결된 요소 삭제
         dreamDeletionRepository.deleteElements(dreamId);
 
-        // 6. 분석 데이터 삭제
+        // 7. 분석 데이터 삭제
         dreamDeletionRepository.deleteAnalysis(dreamId);
 
-        // 7. 꿈 원본 삭제
+        // 8. 꿈 원본 삭제
         int deletedCount = dreamDeletionRepository.deleteDream(
                 dreamId,
                 userId
@@ -120,7 +123,7 @@ public class DreamCommandService {
             );
         }
 
-        // 8. 트랜잭션 커밋 이후 R2 삭제에 사용할 키 반환
+        // 9. DB 트랜잭션 커밋 후 R2 삭제에 사용할 이미지 키 반환
         return imageKeys;
     }
 }
