@@ -12,22 +12,23 @@ public class DreamEntitlementService {
     private static final DreamUsagePolicy FREE_POLICY =
             new DreamUsagePolicy(
                     1,
-                    1,
+                    4,
                     true
             );
 
     private static final DreamUsagePolicy PREMIUM_POLICY =
             new DreamUsagePolicy(
                     3,
-                    2,
+                    8,
                     false
             );
 
     private final SubscriptionService subscriptionService;
 
 
-    public DreamUsagePolicy getPolicy(Long userId) {
-
+    public DreamUsagePolicy getPolicy(
+            Long userId
+    ) {
         if (subscriptionService.isPremium(userId)) {
             return PREMIUM_POLICY;
         }

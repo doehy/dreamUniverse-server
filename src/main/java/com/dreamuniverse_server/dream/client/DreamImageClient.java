@@ -19,22 +19,25 @@ public class DreamImageClient {
     @Value("${openai.image-model}")
     private String imageModel;
 
-    @Value("${openai.image-quality}")
-    private String imageQuality;
 
-
-    public DreamImageResult generate(String prompt) {
-
+    public DreamImageResult generate(
+            String prompt,
+            int panelCount
+    ) {
         ImageGenerateParams params =
                 ImageGenerateParams.builder()
                         .model(imageModel)
                         .prompt(prompt)
                         .n(1)
                         .size(
-                                ImageGenerateParams.Size._1024X1024
+                                getImageSize(
+                                        panelCount
+                                )
                         )
                         .quality(
-                                getImageQuality()
+                                getImageQuality(
+                                        panelCount
+                                )
                         )
                         .outputFormat(
                                 ImageGenerateParams.OutputFormat.PNG
@@ -69,7 +72,9 @@ public class DreamImageClient {
 
         byte[] imageBytes =
                 Base64.getDecoder()
-                        .decode(base64Image);
+                        .decode(
+                                base64Image
+                        );
 
 
         return new DreamImageResult(
@@ -78,28 +83,34 @@ public class DreamImageClient {
     }
 
 
-    private ImageGenerateParams.Quality getImageQuality() {
+    private ImageGenerateParams.Size getImageSize(
+            int panelCount
+    ) {
+        return switch (panelCount) {
 
-        return switch (
-                imageQuality.toLowerCase()
-                ) {
-            case "low" ->
-                    ImageGenerateParams.Quality.LOW;
+            case 4 ->
+                    ImageGenerateParams.Size._1024X1024;
 
-            case "medium" ->
-                    ImageGenerateParams.Quality.MEDIUM;
-
-            case "high" ->
-                    ImageGenerateParams.Quality.HIGH;
-
-            case "auto" ->
-                    ImageGenerateParams.Quality.AUTO;
+            case 8 ->
+                    ImageGenerateParams.Size.of(
+                            "1024x2048"
+                    );
 
             default ->
                     throw new IllegalArgumentException(
-                            "Unsupported image quality: "
-                                    + imageQuality
+                            "Unsupported panel count: "
+                                    + panelCount
                     );
+        };
+    }
+
+
+    private ImageGenerateParams.Quality getImageQuality(int panelCount) {
+        return switch (panelCount) {
+            case 4, 8 -> ImageGenerateParams.Quality.LOW;
+            default -> throw new IllegalArgumentException(
+                    "Unsupported panel count: " + panelCount
+            );
         };
     }
 }

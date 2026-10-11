@@ -35,26 +35,30 @@ public class DreamImageService {
             Long dreamId,
             String content
     ) {
-        boolean adult = isAdult(user);
+        boolean adult =
+                isAdult(
+                        user
+                );
 
         DreamUsagePolicy policy =
                 dreamEntitlementService.getPolicy(
                         user.getId()
                 );
 
-        int maxImageCount =
-                policy.maxImageCount();
+        int panelCount =
+                policy.panelCount();
 
         String prompt =
                 dreamImagePromptBuilder.build(
                         content,
                         adult,
-                        maxImageCount
+                        panelCount
                 );
 
         DreamImageResult result =
                 dreamImageClient.generate(
-                        prompt
+                        prompt,
+                        panelCount
                 );
 
         String imageKey =
@@ -75,11 +79,13 @@ public class DreamImageService {
             String imageKey
     ) {
         try {
+
             imageStorageService.delete(
                     imageKey
             );
 
         } catch (RuntimeException e) {
+
             log.error(
                     "Failed to clean up dream image. imageKey={}",
                     imageKey,
@@ -93,12 +99,15 @@ public class DreamImageService {
             List<String> imageKeys
     ) {
         for (String imageKey : imageKeys) {
+
             try {
+
                 imageStorageService.delete(
                         imageKey
                 );
 
             } catch (RuntimeException e) {
+
                 log.error(
                         "Failed to delete old dream image. imageKey={}",
                         imageKey,
