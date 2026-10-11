@@ -43,6 +43,7 @@ public class DreamService {
     private final DreamAiUsageService dreamAiUsageService;
     private final DreamAiStatusService dreamAiStatusService;
     private final DreamAiAsyncService dreamAiAsyncService;
+    private final DreamImageService dreamImageService;
 
 
     public DreamResponse createDream(
@@ -168,16 +169,16 @@ public class DreamService {
     }
 
 
-    public void deleteDream(
-            Long userId,
-            Long dreamId
-    ) {
+    public void deleteDream(Long userId, Long dreamId) {
+
         User user = getUser(userId);
 
-        dreamCommandService.delete(
+        List<String> imageKeys = dreamCommandService.delete(
                 dreamId,
                 user.getId()
         );
+
+        dreamImageService.deleteOldImages(imageKeys); //r2에서 삭제가 안 될 수도 있음.
     }
 
 
