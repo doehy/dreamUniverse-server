@@ -46,6 +46,12 @@ public class DreamService {
     private final DreamAiUsageService dreamAiUsageService;
     private final DreamImageService dreamImageService;
 
+    /**
+     * 꿈 작성
+     *
+     * 꿈 원문만 저장한다.
+     * AI 분석은 별도의 POST /dreams/{dreamId}/analysis로 요청한다.
+     */
     public DreamResponse createDream(
             Long userId,
             DreamCreateRequest request
@@ -73,25 +79,25 @@ public class DreamService {
                 request.lucidDream()
         );
 
-        if (request.aiRequested()) {
-            requestAiCompletion(
-                    user,
-                    dream
-            );
-        }
-
         return DreamResponse.from(dream);
     }
 
+    /**
+     * 꿈 단건 조회
+     */
     @Transactional(readOnly = true)
     public DreamResponse getDream(
             Long userId,
             Long dreamId
     ) {
         Dream dream = getDreamByUser(dreamId, userId);
+
         return DreamResponse.from(dream);
     }
 
+    /**
+     * 내가 작성한 꿈 목록 조회
+     */
     @Transactional(readOnly = true)
     public List<DreamResponse> getDreams(Long userId) {
         User user = getUser(userId);
@@ -103,6 +109,12 @@ public class DreamService {
                 .toList();
     }
 
+    /**
+     * 꿈 수정
+     *
+     * 원문 및 꿈 속성만 수정한다.
+     * AI 분석 요청은 처리하지 않는다.
+     */
     public DreamResponse updateDream(
             Long userId,
             Long dreamId,
@@ -112,7 +124,7 @@ public class DreamService {
 
         Dream dream = dreamCommandService.update(
                 dreamId,
-                userId,
+                user.getId(),
                 request.title(),
                 request.content(),
                 request.sleepParalysis(),
@@ -120,16 +132,12 @@ public class DreamService {
                 request.lucidDream()
         );
 
-        if (request.aiRequested()) {
-            requestAiCompletion(
-                    user,
-                    dream
-            );
-        }
-
         return DreamResponse.from(dream);
     }
 
+    /**
+     * AI 사용량 조회
+     */
     @Transactional(readOnly = true)
     public DreamAiUsageResponse getAiUsage(Long userId) {
         User user = getUser(userId);
@@ -146,7 +154,15 @@ public class DreamService {
         );
     }
 
-    public void deleteDream(Long userId, Long dreamId) {
+    /**
+     * 꿈 삭제
+     *
+     * DB 삭제 트랜잭션 완료 후 R2 이미지를 정리한다.
+     */
+    public void deleteDream(
+            Long userId,
+            Long dreamId
+    ) {
         User user = getUser(userId);
 
         List<String> imageKeys = dreamCommandService.delete(
@@ -157,6 +173,9 @@ public class DreamService {
         dreamImageService.deleteOldImages(imageKeys);
     }
 
+    /**
+     * 저장된 AI 분석 결과 조회
+     */
     @Transactional(readOnly = true)
     public DreamAnalysisResponse getAnalysis(
             Long userId,
@@ -191,22 +210,35 @@ public class DreamService {
         );
     }
 
+    /**
+     * AI 분석 / 재분석 요청
+     *
+     * POST /dreams/{dreamId}/analysis
+     *
+     * 저장된 꿈 원문을 기준으로 AI 분석을 시작한다.
+     */
     public DreamResponse requestDreamAnalysis(
             Long userId,
             Long dreamId
     ) {
         User user = getUser(userId);
 
-        // 기존 꿈 조회 및 소유권 확인
+        // 꿈 존재 및 소유권 확인
         Dream dream = getDreamByUser(dreamId, userId);
 
-        // 기존 AI 요청 처리 로직 재사용
+        // 사용량 차감, PROCESSING 전환, 비동기 작업 시작
         requestAiCompletion(user, dream);
 
+        // PROCESSING 상태 반환
         return DreamResponse.from(dream);
     }
 
-
+    /**
+     * 실제 AI 요청 처리
+     *
+     * 사용량 차감과 PROCESSING 변경이 커밋된 후
+     * 별도 스레드에서 AI 작업을 실행한다.
+     */
     private void requestAiCompletion(
             User user,
             Dream dream
@@ -218,7 +250,7 @@ public class DreamService {
         );
 
         try {
-            // prepare() 커밋 이후 DB에 저장된 최신 원문 조회
+            // PROCESSING 전환이 커밋된 이후 원문 조회
             Dream currentDream = getDreamByUser(
                     dream.getId(),
                     user.getId()
@@ -226,10 +258,10 @@ public class DreamService {
 
             String content = currentDream.getContent();
 
-            // 응답에 사용할 객체의 상태도 맞춘다.
+            // 현재 응답용 엔티티도 PROCESSING으로 표시
             dream.startAiCompletion();
 
-            // 비동기 AI 분석 시작
+            // 비동기 AI 작업 시작
             dreamAiAsyncService.complete(
                     user.getId(),
                     dream.getId(),
@@ -239,11 +271,18 @@ public class DreamService {
 
         } catch (RuntimeException e) {
 
-            // 작업 제출 전 실패 시 이전 상태 복구
+            log.error(
+                    "Failed to submit dream AI request. dreamId={}",
+                    dream.getId(),
+                    e
+            );
+
+            // 작업 제출 전 실패 시 상태 복구
             try {
                 dreamAiStatusService.restoreAfterFailure(
                         dream.getId()
                 );
+
             } catch (RuntimeException statusException) {
                 log.error(
                         "Failed to restore dream AI status. dreamId={}",
@@ -252,12 +291,13 @@ public class DreamService {
                 );
             }
 
-            // 사용량 반환
+            // 차감된 AI 사용량 반환
             try {
                 dreamAiUsageService.release(
                         user.getId(),
                         usageDate
                 );
+
             } catch (RuntimeException releaseException) {
                 log.error(
                         "AI usage release failed. userId={}, usageDate={}",
@@ -271,7 +311,9 @@ public class DreamService {
         }
     }
 
-
+    /**
+     * 가입이 완료된 사용자 조회
+     */
     private User getUser(Long userId) {
         return userRepository
                 .findById(userId)
@@ -281,6 +323,9 @@ public class DreamService {
                 );
     }
 
+    /**
+     * 사용자 소유 꿈 조회
+     */
     private Dream getDreamByUser(
             Long dreamId,
             Long userId

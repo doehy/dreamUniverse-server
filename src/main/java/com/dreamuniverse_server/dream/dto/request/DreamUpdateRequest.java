@@ -1,3 +1,4 @@
+
 package com.dreamuniverse_server.dream.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
@@ -21,8 +22,7 @@ public record DreamUpdateRequest(
         Boolean nightmare,
 
         @NotNull
-        Boolean lucidDream,
+        Boolean lucidDream
 
-        boolean aiRequested
 ) {
 }
