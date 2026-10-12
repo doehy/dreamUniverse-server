@@ -8,6 +8,8 @@ import java.util.Optional;
 public interface DreamAnalysisRepository
         extends JpaRepository<DreamAnalysis, Long> {
 
+    boolean existsByDreamId(Long dreamId);
+
     void deleteByDreamId(Long dreamId);
 
     Optional<DreamAnalysis> findByDreamId(Long dreamId);

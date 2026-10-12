@@ -21,6 +21,8 @@ public enum ErrorCode {
     DREAM_NOT_FOUND(HttpStatus.NOT_FOUND, "DREAM_404_1", "꿈을 찾을 수 없습니다."),
     DREAM_FORBIDDEN(HttpStatus.FORBIDDEN, "DREAM_403_1", "해당 꿈에 접근할 권한이 없습니다."),
     DREAM_AI_PROCESSING(HttpStatus.CONFLICT, "DREAM_409_1", "분석 중에는 삭제할 수 없습니다. 완료 후 삭제해 주세요."),
+    DREAM_AI_ALREADY_PROCESSING(HttpStatus.CONFLICT, "DREAM_409_2", "이미 분석이 진행 중입니다. 완료 후 다시 시도해 주세요."),
+    DREAM_UPDATE_WHILE_PROCESSING(HttpStatus.CONFLICT, "DREAM_409_3", "분석 중에는 수정할 수 없습니다. 완료 후 수정해 주세요."),
     DREAM_AI_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS,"DREAM_429_1","오늘 사용할 수 있는 AI 완성 횟수를 모두 사용했습니다."),
     DREAM_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS,
             "DREAM_429_2", "하루에 작성할 수 있는 꿈은 최대 3개입니다."),

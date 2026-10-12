@@ -1,3 +1,4 @@
+
 package com.dreamuniverse_server.dream.service;
 
 import com.dreamuniverse_server.dream.dto.request.DreamCreateRequest;
@@ -39,12 +40,11 @@ public class DreamService {
     private final UserRepository userRepository;
 
     private final DreamCommandService dreamCommandService;
-
-    private final DreamAiUsageService dreamAiUsageService;
+    private final DreamAiRequestService dreamAiRequestService;
     private final DreamAiStatusService dreamAiStatusService;
     private final DreamAiAsyncService dreamAiAsyncService;
+    private final DreamAiUsageService dreamAiUsageService;
     private final DreamImageService dreamImageService;
-
 
     public DreamResponse createDream(
             Long userId,
@@ -63,8 +63,6 @@ public class DreamService {
             );
         }
 
-        // Transaction A
-        // 사용자가 작성한 꿈 원문부터 먼저 저장한다.
         Dream dream = dreamCommandService.create(
                 user,
                 request.title(),
@@ -86,36 +84,25 @@ public class DreamService {
         return DreamResponse.from(dream);
     }
 
-
     @Transactional(readOnly = true)
     public DreamResponse getDream(
             Long userId,
             Long dreamId
     ) {
-        Dream dream = getDreamByUser(
-                dreamId,
-                userId
-        );
-
+        Dream dream = getDreamByUser(dreamId, userId);
         return DreamResponse.from(dream);
     }
 
-
     @Transactional(readOnly = true)
-    public List<DreamResponse> getDreams(
-            Long userId
-    ) {
+    public List<DreamResponse> getDreams(Long userId) {
         User user = getUser(userId);
 
         return dreamRepository
-                .findAllByUserIdOrderByDreamDateDesc(
-                        user.getId()
-                )
+                .findAllByUserIdOrderByDreamDateDesc(user.getId())
                 .stream()
                 .map(DreamResponse::from)
                 .toList();
     }
-
 
     public DreamResponse updateDream(
             Long userId,
@@ -124,8 +111,6 @@ public class DreamService {
     ) {
         User user = getUser(userId);
 
-        // Transaction A
-        // 사용자가 수정한 원문부터 먼저 저장한다.
         Dream dream = dreamCommandService.update(
                 dreamId,
                 userId,
@@ -147,20 +132,15 @@ public class DreamService {
         return DreamResponse.from(dream);
     }
 
-
     @Transactional(readOnly = true)
-    public DreamAiUsageResponse getAiUsage(
-            Long userId
-    ) {
+    public DreamAiUsageResponse getAiUsage(Long userId) {
         User user = getUser(userId);
 
         int remainingCount =
-                dreamAiUsageService
-                        .getRemainingCount(user);
+                dreamAiUsageService.getRemainingCount(user);
 
         int dailyLimit =
-                dreamAiUsageService
-                        .getDailyLimit(user);
+                dreamAiUsageService.getDailyLimit(user);
 
         return new DreamAiUsageResponse(
                 remainingCount,
@@ -168,9 +148,7 @@ public class DreamService {
         );
     }
 
-
     public void deleteDream(Long userId, Long dreamId) {
-
         User user = getUser(userId);
 
         List<String> imageKeys = dreamCommandService.delete(
@@ -178,9 +156,8 @@ public class DreamService {
                 user.getId()
         );
 
-        dreamImageService.deleteOldImages(imageKeys); //r2에서 삭제가 안 될 수도 있음.
+        dreamImageService.deleteOldImages(imageKeys);
     }
-
 
     @Transactional(readOnly = true)
     public DreamAnalysisResponse getAnalysis(
@@ -189,40 +166,25 @@ public class DreamService {
     ) {
         User user = getUser(userId);
 
-        Dream dream =
-                dreamRepository
-                        .findByIdAndUserId(
-                                dreamId,
-                                user.getId()
+        Dream dream = dreamRepository
+                .findByIdAndUserId(dreamId, user.getId())
+                .orElseThrow(() ->
+                        new CustomException(ErrorCode.DREAM_NOT_FOUND)
+                );
+
+        DreamAnalysis analysis = dreamAnalysisRepository
+                .findByDreamId(dream.getId())
+                .orElseThrow(() ->
+                        new CustomException(
+                                ErrorCode.DREAM_ANALYSIS_NOT_FOUND
                         )
-                        .orElseThrow(
-                                () -> new CustomException(
-                                        ErrorCode.DREAM_NOT_FOUND
-                                )
-                        );
+                );
 
-        DreamAnalysis analysis =
-                dreamAnalysisRepository
-                        .findByDreamId(
-                                dream.getId()
-                        )
-                        .orElseThrow(
-                                () -> new CustomException(
-                                        ErrorCode.DREAM_ANALYSIS_NOT_FOUND
-                                )
-                        );
+        List<DreamEmotion> emotions = dreamEmotionRepository
+                .findAllByAnalysisId(analysis.getId());
 
-        List<DreamEmotion> emotions =
-                dreamEmotionRepository
-                        .findAllByAnalysisId(
-                                analysis.getId()
-                        );
-
-        List<DreamElement> elements =
-                dreamElementRepository
-                        .findAllByAnalysisId(
-                                analysis.getId()
-                        );
+        List<DreamElement> elements = dreamElementRepository
+                .findAllByAnalysisId(analysis.getId());
 
         return DreamAnalysisResponse.from(
                 analysis,
@@ -231,40 +193,24 @@ public class DreamService {
         );
     }
 
-
     private void requestAiCompletion(
             User user,
             Dream dream,
             String content
     ) {
-        LocalDate usageDate =
-                dreamAiUsageService.acquire(
-                        user
-                );
+        // 상태 확인, 사용량 차감, PROCESSING 전환을
+        // 하나의 트랜잭션에서 처리한다.
+        LocalDate usageDate = dreamAiRequestService.prepare(
+                user.getId(),
+                user,
+                dream.getId()
+        );
 
         try {
-            /*
-             * 별도 짧은 Transaction으로
-             * DB 상태를 PROCESSING으로 변경한다.
-             */
-            dreamAiStatusService.markProcessing(
-                    dream.getId()
-            );
-
-            /*
-             * 현재 DreamService가 가지고 있는 dream 객체는
-             * 위 Transaction에서 조회한 객체와 다른 인스턴스일 수 있다.
-             *
-             * 따라서 즉시 반환되는 DreamResponse에서도
-             * PROCESSING을 보여주도록 현재 객체도 맞춰준다.
-             */
+            // 현재 반환용 객체도 PROCESSING 상태로 맞춘다.
+            // 위 트랜잭션이 커밋된 후 호출한다.
             dream.startAiCompletion();
 
-            /*
-             * 여기서부터는 별도 Thread에서 실행된다.
-             *
-             * HTTP 요청은 이 호출 이후 AI 작업 완료를 기다리지 않는다.
-             */
             dreamAiAsyncService.complete(
                     user.getId(),
                     dream.getId(),
@@ -274,21 +220,14 @@ public class DreamService {
 
         } catch (RuntimeException e) {
 
-            /*
-             * 비동기 작업을 시작하기도 전에 실패했다면
-             * 상태와 사용량을 복구한다.
-             */
+            // 비동기 작업 제출 자체가 실패한 경우
             try {
-                dreamAiStatusService.markFailed(
+                dreamAiStatusService.restoreAfterFailure(
                         dream.getId()
                 );
-
-                // 즉시 반환용 현재 객체 상태도 맞춘다.
-                dream.failAiCompletion();
-
             } catch (RuntimeException statusException) {
                 log.error(
-                        "Failed to mark dream AI status as FAILED. dreamId={}",
+                        "Failed to restore dream AI status. dreamId={}",
                         dream.getId(),
                         statusException
                 );
@@ -299,7 +238,6 @@ public class DreamService {
                         user.getId(),
                         usageDate
                 );
-
             } catch (RuntimeException releaseException) {
                 log.error(
                         "AI usage release failed. userId={}, usageDate={}",
@@ -313,34 +251,23 @@ public class DreamService {
         }
     }
 
-
-    private User getUser(
-            Long userId
-    ) {
+    private User getUser(Long userId) {
         return userRepository
                 .findById(userId)
                 .filter(User::isSignupCompleted)
-                .orElseThrow(
-                        () -> new CustomException(
-                                ErrorCode.USER_NOT_FOUND
-                        )
+                .orElseThrow(() ->
+                        new CustomException(ErrorCode.USER_NOT_FOUND)
                 );
     }
-
 
     private Dream getDreamByUser(
             Long dreamId,
             Long userId
     ) {
         return dreamRepository
-                .findByIdAndUserId(
-                        dreamId,
-                        userId
-                )
-                .orElseThrow(
-                        () -> new CustomException(
-                                ErrorCode.DREAM_NOT_FOUND
-                        )
+                .findByIdAndUserId(dreamId, userId)
+                .orElseThrow(() ->
+                        new CustomException(ErrorCode.DREAM_NOT_FOUND)
                 );
     }
 }

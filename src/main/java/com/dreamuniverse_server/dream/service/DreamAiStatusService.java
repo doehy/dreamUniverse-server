@@ -1,48 +1,45 @@
+
 package com.dreamuniverse_server.dream.service;
 
 import com.dreamuniverse_server.dream.entity.Dream;
+import com.dreamuniverse_server.dream.entity.DreamAiStatus;
+import com.dreamuniverse_server.dream.repository.DreamAnalysisRepository;
 import com.dreamuniverse_server.dream.repository.DreamRepository;
-import com.dreamuniverse_server.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import static com.dreamuniverse_server.global.exception.ErrorCode.DREAM_NOT_FOUND;
 
 @Service
 @RequiredArgsConstructor
 public class DreamAiStatusService {
 
     private final DreamRepository dreamRepository;
+    private final DreamAnalysisRepository dreamAnalysisRepository;
 
     @Transactional
-    public void markProcessing(
-            Long dreamId
-    ) {
-        Dream dream =
-                getDream(dreamId);
+    public DreamAiStatus restoreAfterFailure(Long dreamId) {
 
-        dream.startAiCompletion();
-    }
+        Dream dream = dreamRepository
+                .findByIdForUpdate(dreamId)
+                .orElseThrow();
 
-    @Transactional
-    public void markFailed(
-            Long dreamId
-    ) {
-        Dream dream =
-                getDream(dreamId);
+        // PROCESSING 상태가 아니면 다른 완료 상태를 덮어쓰지 않는다.
+        if (dream.getAiStatus() != DreamAiStatus.PROCESSING) {
+            return dream.getAiStatus();
+        }
 
-        dream.failAiCompletion();
-    }
+        // 기존에 성공적으로 저장된 분석이 있는지 확인
+        boolean hasPreviousResult =
+                dreamAnalysisRepository.existsByDreamId(dreamId);
 
-    private Dream getDream(
-            Long dreamId
-    ) {
-        return dreamRepository.findById(dreamId)
-                .orElseThrow(
-                        () -> new CustomException(
-                                DREAM_NOT_FOUND
-                        )
-                );
+        if (hasPreviousResult) {
+            // 재분석 실패: 기존 결과를 유지하고 COMPLETED 복구
+            dream.completeAiCompletion();
+        } else {
+            // 최초 분석 실패
+            dream.failAiCompletion();
+        }
+
+        return dream.getAiStatus();
     }
 }
