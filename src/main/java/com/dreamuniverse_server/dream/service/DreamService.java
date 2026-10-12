@@ -76,8 +76,7 @@ public class DreamService {
         if (request.aiRequested()) {
             requestAiCompletion(
                     user,
-                    dream,
-                    request.content()
+                    dream
             );
         }
 
@@ -124,8 +123,7 @@ public class DreamService {
         if (request.aiRequested()) {
             requestAiCompletion(
                     user,
-                    dream,
-                    request.content()
+                    dream
             );
         }
 
@@ -193,13 +191,26 @@ public class DreamService {
         );
     }
 
+    public DreamResponse requestDreamAnalysis(
+            Long userId,
+            Long dreamId
+    ) {
+        User user = getUser(userId);
+
+        // 기존 꿈 조회 및 소유권 확인
+        Dream dream = getDreamByUser(dreamId, userId);
+
+        // 기존 AI 요청 처리 로직 재사용
+        requestAiCompletion(user, dream);
+
+        return DreamResponse.from(dream);
+    }
+
+
     private void requestAiCompletion(
             User user,
-            Dream dream,
-            String content
+            Dream dream
     ) {
-        // 상태 확인, 사용량 차감, PROCESSING 전환을
-        // 하나의 트랜잭션에서 처리한다.
         LocalDate usageDate = dreamAiRequestService.prepare(
                 user.getId(),
                 user,
@@ -207,10 +218,18 @@ public class DreamService {
         );
 
         try {
-            // 현재 반환용 객체도 PROCESSING 상태로 맞춘다.
-            // 위 트랜잭션이 커밋된 후 호출한다.
+            // prepare() 커밋 이후 DB에 저장된 최신 원문 조회
+            Dream currentDream = getDreamByUser(
+                    dream.getId(),
+                    user.getId()
+            );
+
+            String content = currentDream.getContent();
+
+            // 응답에 사용할 객체의 상태도 맞춘다.
             dream.startAiCompletion();
 
+            // 비동기 AI 분석 시작
             dreamAiAsyncService.complete(
                     user.getId(),
                     dream.getId(),
@@ -220,7 +239,7 @@ public class DreamService {
 
         } catch (RuntimeException e) {
 
-            // 비동기 작업 제출 자체가 실패한 경우
+            // 작업 제출 전 실패 시 이전 상태 복구
             try {
                 dreamAiStatusService.restoreAfterFailure(
                         dream.getId()
@@ -233,6 +252,7 @@ public class DreamService {
                 );
             }
 
+            // 사용량 반환
             try {
                 dreamAiUsageService.release(
                         user.getId(),
@@ -250,6 +270,7 @@ public class DreamService {
             throw e;
         }
     }
+
 
     private User getUser(Long userId) {
         return userRepository

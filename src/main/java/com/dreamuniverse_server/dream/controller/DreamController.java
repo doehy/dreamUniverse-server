@@ -121,6 +121,26 @@ public class DreamController {
     }
 
     /**
+     * 저장된 꿈 AI 분석 / 재분석 요청
+     */
+    @PostMapping("/{dreamId}/analysis")
+    public ResponseEntity<DreamResponse> requestDreamAnalysis(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long dreamId
+    ) {
+        Long userId = Long.valueOf(jwt.getSubject());
+
+        DreamResponse response = dreamService.requestDreamAnalysis(
+                userId,
+                dreamId
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.ACCEPTED)
+                .body(response);
+    }
+
+    /**
      * 꿈 분석 상세 조회
      */
     @GetMapping("/{dreamId}/analysis")
