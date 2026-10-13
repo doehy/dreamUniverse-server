@@ -5,6 +5,7 @@ import java.time.LocalDate;
 public record DreamGalleryImageResponse(
         Long dreamId,
         LocalDate dreamDate,
+        String imageKey,
         String imageUrl
 ) {
 }

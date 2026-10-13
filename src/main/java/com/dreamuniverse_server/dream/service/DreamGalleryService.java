@@ -97,18 +97,19 @@ public class DreamGalleryService {
     private DreamGalleryImageResponse toResponse(
             DreamImage image
     ) {
-        Dream dream =
-                image.getDream();
+        Dream dream = image.getDream();
+
+        String imageKey = image.getImageKey();
 
         String imageUrl =
-                imageStorageService
-                        .generatePresignedGetUrl(
-                                image.getImageKey()
-                        );
+                imageStorageService.generatePresignedGetUrl(
+                        imageKey
+                );
 
         return new DreamGalleryImageResponse(
                 dream.getId(),
                 dream.getDreamDate(),
+                imageKey,
                 imageUrl
         );
     }
