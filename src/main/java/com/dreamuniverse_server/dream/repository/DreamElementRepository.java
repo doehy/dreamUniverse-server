@@ -8,6 +8,7 @@ import com.dreamuniverse_server.dream.repository.projection.DreamWorldRandomElem
 import com.dreamuniverse_server.dream.statistics.repository.projection.DreamStatisticsElementProjection;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -20,8 +21,14 @@ public interface DreamElementRepository
 
     List<DreamElement> findAllByAnalysisId(Long analysisId);
 
-    void deleteAllByAnalysisId(Long analysisId);
-
+    @Modifying
+    @Query("""
+        DELETE FROM DreamElement e
+        WHERE e.analysis.id = :analysisId
+        """)
+    int deleteAllByAnalysisId(
+            @Param("analysisId") Long analysisId
+    );
     @Query("""
             select
                 element.elementValue as elementValue,

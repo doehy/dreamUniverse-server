@@ -3,6 +3,7 @@ package com.dreamuniverse_server.dream.service;
 
 import com.dreamuniverse_server.dream.client.DreamAiClient;
 import com.dreamuniverse_server.dream.dto.ai.DreamAnalysisResult;
+import com.dreamuniverse_server.dream.validation.DreamAnalysisValidator;
 import com.dreamuniverse_server.user.entity.User;
 import com.dreamuniverse_server.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class DreamAiAsyncService {
     private final DreamAiCompletionService dreamAiCompletionService;
     private final DreamAiStatusService dreamAiStatusService;
     private final DreamAiUsageService dreamAiUsageService;
+    private final DreamAnalysisValidator dreamAnalysisValidator;
 
     @Async("dreamAiExecutor")
     public void complete(
@@ -61,6 +63,10 @@ public class DreamAiAsyncService {
                     "[Dream AI] Text analysis COMPLETED dreamId={}",
                     dreamId
             );
+
+            // 2. 분석 결과 검증
+            // 실패하면 이미지 생성 전에 예외 발생
+            dreamAnalysisValidator.validate(analysisResult);
 
             // 3. 이미지 생성 및 R2 업로드
             log.info(

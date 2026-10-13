@@ -27,6 +27,20 @@ public class DreamAnalysisService {
             Dream dream,
             DreamAnalysisResult result
     ) {
+        // 1. AI 응답에 중복 감정 유형이 존재하는지 확인
+        long uniqueEmotionCount = result.getEmotions()
+                .stream()
+                .map(emotion -> emotion.getType())
+                .distinct()
+                .count();
+
+        if (uniqueEmotionCount != result.getEmotions().size()) {
+            throw new IllegalArgumentException(
+                    "AI analysis contains duplicate emotion types"
+            );
+        }
+
+        // 2. 기존 분석 조회 또는 새로운 분석 생성
         DreamAnalysis analysis =
                 dreamAnalysisRepository.findByDreamId(dream.getId())
                         .map(existing -> {
@@ -51,6 +65,7 @@ public class DreamAnalysisService {
                                 )
                         );
 
+        // 3. 기존 감정·요소를 벌크 DELETE로 즉시 삭제
         dreamEmotionRepository.deleteAllByAnalysisId(
                 analysis.getId()
         );
@@ -59,6 +74,7 @@ public class DreamAnalysisService {
                 analysis.getId()
         );
 
+        // 4. 새로운 감정 데이터 생성
         List<DreamEmotion> emotions =
                 result.getEmotions()
                         .stream()
@@ -71,10 +87,10 @@ public class DreamAnalysisService {
                         )
                         .toList();
 
-        dreamEmotionRepository.saveAll(
-                emotions
-        );
+        // 5. 새로운 감정 저장
+        dreamEmotionRepository.saveAll(emotions);
 
+        // 6. 새로운 요소 데이터 생성
         List<DreamElement> elements =
                 result.getElements()
                         .stream()
@@ -87,9 +103,8 @@ public class DreamAnalysisService {
                         )
                         .toList();
 
-        dreamElementRepository.saveAll(
-                elements
-        );
+        // 7. 새로운 요소 저장
+        dreamElementRepository.saveAll(elements);
 
         return analysis;
     }

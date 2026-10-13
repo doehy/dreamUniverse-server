@@ -4,6 +4,7 @@ import com.dreamuniverse_server.dream.entity.DreamEmotion;
 import com.dreamuniverse_server.dream.statistics.repository.projection.DreamEmotionScoreProjection;
 import com.dreamuniverse_server.dream.statistics.repository.projection.DreamMonthlyEmotionScoreProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -14,7 +15,14 @@ public interface DreamEmotionRepository extends JpaRepository<DreamEmotion, Long
 
     List<DreamEmotion> findAllByAnalysisId(Long analysisId);
 
-    void deleteAllByAnalysisId(Long analysisId);
+    @Modifying
+    @Query("""
+        DELETE FROM DreamEmotion e
+        WHERE e.analysis.id = :analysisId
+        """)
+    int deleteAllByAnalysisId(
+            @Param("analysisId") Long analysisId
+    );
 
     @Query(
             value = """
