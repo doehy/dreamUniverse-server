@@ -219,7 +219,8 @@ public class DreamService {
      */
     public DreamResponse requestDreamAnalysis(
             Long userId,
-            Long dreamId
+            Long dreamId,
+            String adSessionId
     ) {
         User user = getUser(userId);
 
@@ -227,7 +228,7 @@ public class DreamService {
         Dream dream = getDreamByUser(dreamId, userId);
 
         // 사용량 차감, PROCESSING 전환, 비동기 작업 시작
-        requestAiCompletion(user, dream);
+        requestAiCompletion(user, dream, adSessionId);
 
         // PROCESSING 상태 반환
         return DreamResponse.from(dream);
@@ -241,12 +242,14 @@ public class DreamService {
      */
     private void requestAiCompletion(
             User user,
-            Dream dream
+            Dream dream,
+            String adSessionId
     ) {
         LocalDate usageDate = dreamAiRequestService.prepare(
                 user.getId(),
                 user,
-                dream.getId()
+                dream.getId(),
+                adSessionId
         );
 
         try {

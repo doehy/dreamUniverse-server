@@ -17,6 +17,10 @@ public enum ErrorCode {
     // User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_404_1", "유저를 찾을 수 없습니다."),
 
+    // Ad Reward
+    AD_REWARD_REQUIRED(HttpStatus.BAD_REQUEST, "AD_400_1", "AI 분석을 위해 광고 시청이 필요합니다."),
+    AD_REWARD_NOT_AVAILABLE(HttpStatus.CONFLICT, "AD_409_1", "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요."),
+
     // Dream
     DREAM_NOT_FOUND(HttpStatus.NOT_FOUND, "DREAM_404_1", "꿈을 찾을 수 없습니다."),
     DREAM_FORBIDDEN(HttpStatus.FORBIDDEN, "DREAM_403_1", "해당 꿈에 접근할 권한이 없습니다."),

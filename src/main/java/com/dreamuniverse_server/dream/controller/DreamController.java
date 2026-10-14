@@ -1,5 +1,6 @@
 package com.dreamuniverse_server.dream.controller;
 
+import com.dreamuniverse_server.dream.dto.request.DreamAdSessionRequest;
 import com.dreamuniverse_server.dream.dto.request.DreamCreateRequest;
 import com.dreamuniverse_server.dream.dto.request.DreamUpdateRequest;
 import com.dreamuniverse_server.dream.dto.response.*;
@@ -124,15 +125,21 @@ public class DreamController {
      * 저장된 꿈 AI 분석 / 재분석 요청
      */
     @PostMapping("/{dreamId}/analysis")
-    public ResponseEntity<DreamResponse> requestDreamAnalysis(
+    public ResponseEntity<DreamResponse> requestAnalysis(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Long dreamId
+            @PathVariable Long dreamId,
+            @RequestBody(required = false) DreamAdSessionRequest request
     ) {
         Long userId = Long.valueOf(jwt.getSubject());
 
+        String adSessionId = request == null
+                ? null
+                : request.adSessionId();
+
         DreamResponse response = dreamService.requestDreamAnalysis(
                 userId,
-                dreamId
+                dreamId,
+                adSessionId
         );
 
         return ResponseEntity
