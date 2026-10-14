@@ -11,7 +11,7 @@ public class DreamEntitlementService {
 
     private static final DreamUsagePolicy FREE_POLICY =
             new DreamUsagePolicy(
-                    1,
+                    3,
                     4,
                     true
             );
