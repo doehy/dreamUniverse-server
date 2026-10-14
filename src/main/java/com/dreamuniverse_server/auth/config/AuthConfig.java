@@ -65,6 +65,11 @@ public class AuthConfig {
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/google", "/api/auth/kakao", "/api/auth/signup", "/api/auth/refresh", "/api/auth/logout").permitAll()
+                        // Google AdMob SSV 콜백만 JWT 없이 허용
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/ads/admob/ssv"
+                        ).permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(resource -> resource.jwt(jwt -> jwt.decoder(decoder)))
                 .build();
