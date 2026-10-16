@@ -136,15 +136,23 @@ public class AdMobSsvVerifier {
         String adUnit =
                 required(params, "ad_unit");
 
+        String rewardItem =
+                required(params, "reward_item");
+
+        String rewardAmount =
+                required(params, "reward_amount");
+
         String timestamp =
                 required(params, "timestamp");
 
         final long timestampMillis;
+        final long parsedRewardAmount;
 
         try {
             timestampMillis = Long.parseLong(timestamp);
+            parsedRewardAmount = Long.parseLong(rewardAmount);
 
-            if (timestampMillis < 0) {
+            if (timestampMillis < 0 || parsedRewardAmount <= 0) {
                 throw invalid();
             }
 
@@ -156,6 +164,8 @@ public class AdMobSsvVerifier {
                 sessionId,
                 transactionId,
                 adUnit,
+                rewardItem,
+                parsedRewardAmount,
                 timestampMillis
         );
     }
@@ -339,6 +349,8 @@ public class AdMobSsvVerifier {
             String sessionId,
             String transactionId,
             String adUnit,
+            String rewardItem,
+            long rewardAmount,
             long timestampMillis
     ) {
     }
