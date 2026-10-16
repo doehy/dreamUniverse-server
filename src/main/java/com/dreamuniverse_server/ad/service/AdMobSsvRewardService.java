@@ -104,7 +104,11 @@ public class AdMobSsvRewardService {
         }
 
         // 9. 세션 생성 이전의 광고 이벤트인지 확인
-        if (rewardTime.isBefore(session.getCreatedAt())) {
+        if (rewardTime.isBefore(
+                session.getCreatedAt().truncatedTo(
+                        java.time.temporal.ChronoUnit.MILLIS
+                )
+        )) {
             log.warn("[AdMob SSV] Reward predates session");
             return;
         }
