@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.*;
+import jakarta.persistence.EntityManager;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -107,6 +108,9 @@ class DreamAiRequestIntegrationTest {
 
     @Autowired
     private PlatformTransactionManager transactionManager;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @MockitoBean
     private DreamEntitlementService entitlementService;
@@ -323,6 +327,76 @@ class DreamAiRequestIntegrationTest {
         }
 
         assertEquals(1, consumedCount);
+    }
+
+
+    @Test
+    void 광고_소비_후_트랜잭션_실패시_모든_변경이_롤백된다() {
+
+        // Given: 가입 사용자, 꿈, VERIFIED 광고 세션
+        Fixture fixture = createFixture();
+
+        Long userId = fixture.user().getId();
+        Long dreamId = fixture.dream1();
+        String sessionId = fixture.session1();
+
+        LocalDate today = LocalDate.now(
+                java.time.ZoneId.of("Asia/Seoul")
+        );
+
+        // When: 정상적으로 AI 분석 준비를 마친 후
+        // 같은 트랜잭션에서 강제로 오류 발생
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> tx().executeWithoutResult(status -> {
+
+                    User user = userRepository
+                            .findById(userId)
+                            .orElseThrow();
+
+                    // 기존 @Transactional(REQUIRED)이
+                    // 외부 트랜잭션에 참여한다.
+                    requestService.prepare(
+                            userId,
+                            user,
+                            dreamId,
+                            sessionId
+                    );
+
+                    // INSERT/UPDATE를 실제 MySQL에 반영한다.
+                    // 하지만 아직 COMMIT은 하지 않는다.
+                    entityManager.flush();
+
+                    // 트랜잭션이 완료되기 직전 실패한 상황
+                    throw new IllegalStateException(
+                            "Simulated failure after reward consumption"
+                    );
+                })
+        );
+
+        assertEquals(
+                "Simulated failure after reward consumption",
+                exception.getMessage()
+        );
+
+        // Then: 모든 DB 변경이 롤백됐는지 확인
+        assertEquals(
+                0,
+                usedCount(userId, today),
+                "AI 사용량이 복구되어야 한다"
+        );
+
+        assertEquals(
+                RewardedAdStatus.VERIFIED,
+                adStatus(sessionId),
+                "광고 보상이 VERIFIED 상태로 복구되어야 한다"
+        );
+
+        assertEquals(
+                DreamAiStatus.NOT_REQUESTED,
+                dreamStatus(dreamId),
+                "꿈이 NOT_REQUESTED 상태로 복구되어야 한다"
+        );
     }
 
     // --------------------------------------------------
