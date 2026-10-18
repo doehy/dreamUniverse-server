@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: dreamuniverse-server
+  profiles:
+    default: local
+  sql:
+    init:
+      mode: always
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+    defer-datasource-initialization: true
+
+app:
+  auth:
+    google:
+      client-id: ${GOOGLE_CLIENT_ID}
+    kakao:
+      app-id: ${KAKAO_APP_ID:}
+    token:
+      secret: ${JWT_SECRET}
+      ttl-seconds: 900
+      refresh-ttl-seconds: 2592000
+      signup-ttl-seconds: 600
+  admob:
+    rewarded-ad-unit-id: ${ADMOB_REWARDED_AD_UNIT_ID:}
+    reward-item: ai_completion
+    reward-amount: 1
+
+openai:
+  api-key: ${OPENAI_API_KEY}
+  text-model: gpt-5-mini
+  image-model: gpt-image-2
+
+r2:
+  account-id: ${R2_ACCOUNT_ID}
+  access-key-id: ${R2_ACCESS_KEY_ID}
+  secret-access-key: ${R2_SECRET_ACCESS_KEY}
+  bucket-name: ${R2_BUCKET_NAME}
+
+dream-assets:
+  base-url: https://pub-4440b28f55a749388368d8153cf160b6.r2.dev
