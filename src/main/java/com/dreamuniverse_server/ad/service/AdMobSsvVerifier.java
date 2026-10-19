@@ -127,8 +127,8 @@ public class AdMobSsvVerifier {
         Map<String, String> params =
                 parseParameters(signedContent);
 
-        String sessionId =
-                required(params, "custom_data");
+        // Google SSV 규격에서 custom_data는 선택적 매개변수
+        String sessionId = params.get("custom_data");
 
         String transactionId =
                 required(params, "transaction_id");

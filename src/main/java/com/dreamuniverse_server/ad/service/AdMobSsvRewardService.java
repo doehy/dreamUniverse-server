@@ -47,9 +47,18 @@ public class AdMobSsvRewardService {
             return;
         }
 
-        // 3. custom_data에 담긴 세션 ID 형식 확인
+        // 3. custom_data에 담긴 세션 ID 확인
+        String sessionId = callback.sessionId();
+
+        // 세션 ID가 없으면 보상은 지급하지 않고 종료
+        if (sessionId == null || sessionId.isBlank()) {
+            log.info("[AdMob SSV] No session ID; reward not granted");
+            return;
+        }
+
+        // 세션 ID 형식 검증
         try {
-            UUID.fromString(callback.sessionId());
+            UUID.fromString(sessionId);
         } catch (IllegalArgumentException e) {
             log.warn("[AdMob SSV] Invalid session ID");
             return;
