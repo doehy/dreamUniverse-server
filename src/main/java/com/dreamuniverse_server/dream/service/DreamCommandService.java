@@ -18,14 +18,15 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class DreamCommandService {
 
     private final DreamRepository dreamRepository;
     private final DreamImageRepository dreamImageRepository;
     private final DreamDeletionRepository dreamDeletionRepository;
+    private final DreamImageService dreamImageService;
 
-    @Transactional
     public Dream create(
             User user,
             String title,
@@ -48,7 +49,6 @@ public class DreamCommandService {
         return dreamRepository.save(dream);
     }
 
-    @Transactional
     public Dream update(
             Long dreamId,
             Long userId,
@@ -82,8 +82,7 @@ public class DreamCommandService {
         return dream;
     }
 
-    @Transactional
-    public List<String> delete(Long dreamId, Long userId) {
+    public void delete(Long dreamId, Long userId) {
 
         // 1. 소유권 확인 및 행 잠금
         Dream dream = dreamRepository
@@ -105,6 +104,12 @@ public class DreamCommandService {
                 .stream()
                 .map(DreamImage::getImageKey)
                 .toList();
+
+        try {
+            dreamImageService.deleteDreamImagesStrict(dreamId, imageKeys);
+        } catch (RuntimeException error) {
+            throw new CustomException(ErrorCode.DREAM_IMAGE_DELETE_FAILED);
+        }
 
         // 4. 이미지 DB 레코드 삭제 및 영속성 컨텍스트 정리
         dreamDeletionRepository.deleteImages(dreamId);
@@ -128,6 +133,5 @@ public class DreamCommandService {
             );
         }
 
-        return imageKeys;
     }
 }

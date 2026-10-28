@@ -30,7 +30,7 @@ public class RefreshTokenService {
     }
 
     public TokenResponse create(Long userId) {
-        userService.getProfile(userId);
+        userService.lockRegisteredUser(userId);
         Instant now = Instant.now();
         var session = refreshSessionRepository.save(RefreshSession.create(userId,
                 now.plusSeconds(authProperties.token().refreshTtlSeconds())));
@@ -42,6 +42,8 @@ public class RefreshTokenService {
     public TokenResponse refresh(String rawToken) {
         String hash = hash(rawToken);
         Long sessionId = refreshTokenRepository.findSessionId(hash).orElseThrow(InvalidRefreshTokenException::new);
+        var owner = refreshSessionRepository.findById(sessionId).orElseThrow(InvalidRefreshTokenException::new);
+        userService.lockRegisteredUser(owner.getUserId());
         var session = refreshSessionRepository.findLockedById(sessionId).orElseThrow(InvalidRefreshTokenException::new);
         var token = refreshTokenRepository.findLockedByHash(hash).orElseThrow(InvalidRefreshTokenException::new);
         Instant now = Instant.now();

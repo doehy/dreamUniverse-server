@@ -1,5 +1,8 @@
 package com.dreamuniverse_server.auth.config;
 
+import jakarta.servlet.DispatcherType;
+import com.dreamuniverse_server.user.entity.User;
+import com.dreamuniverse_server.user.repository.UserRepository;
 import java.util.Base64;
 import java.util.Set;
 import javax.crypto.SecretKey;
@@ -46,13 +49,20 @@ public class AuthConfig {
     }
 
     @Bean("accessTokenDecoder")
-    JwtDecoder accessTokenDecoder(SecretKey tokenKey) {
+    JwtDecoder accessTokenDecoder(SecretKey tokenKey, UserRepository userRepository) {
         var decoder = NimbusJwtDecoder.withSecretKey(tokenKey).macAlgorithm(MacAlgorithm.HS256).build();
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
                 TokenValidators.forAudienceAndIssuers(AUDIENCE, Set.of(ISSUER)),
                 new JwtClaimValidator<String>("token_use", "access"::equals),
                 new JwtClaimValidator<String>("sub", TokenValidators::isUserId)));
-        return decoder;
+        return rawToken -> {
+            Jwt jwt = decoder.decode(rawToken);
+            if (userRepository.findById(Long.valueOf(jwt.getSubject()))
+                    .filter(User::isSignupCompleted).isEmpty()) {
+                throw new BadJwtException("Account is no longer available");
+            }
+            return jwt;
+        };
     }
 
     @Bean
@@ -63,7 +73,7 @@ public class AuthConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .requestCache(cache -> cache.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/google", "/api/auth/kakao", "/api/auth/signup", "/api/auth/refresh", "/api/auth/logout").permitAll()
                         // Google AdMob SSV 콜백만 JWT 없이 허용
                         .requestMatchers(

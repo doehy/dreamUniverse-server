@@ -95,6 +95,12 @@ public class DreamImageService {
     }
 
 
+    /** 꿈 삭제 및 회원탈퇴 시 strict하게 삭제. */
+    public void deleteDreamImagesStrict(Long dreamId, List<String> imageKeys) {
+        for (String imageKey : imageKeys) imageStorageService.delete(imageKey);
+        imageStorageService.deleteDreamPrefix(dreamId);
+    }
+
     public void deleteOldImages(
             List<String> imageKeys
     ) {

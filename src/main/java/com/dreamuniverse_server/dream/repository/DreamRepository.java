@@ -13,6 +13,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface DreamRepository extends JpaRepository<Dream, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select d from Dream d where d.user.id = :userId order by d.id")
+    List<Dream> findAllByUserIdForUpdate(@Param("userId") Long userId);
+
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""

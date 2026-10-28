@@ -155,9 +155,10 @@ public class DreamService {
     }
 
     /**
-     * 꿈 삭제
+     * 꿈과 관련 이미지를 삭제한다.
      *
-     * DB 삭제 트랜잭션 완료 후 R2 이미지를 정리한다.
+     * R2 이미지 삭제에 성공한 경우에만 DB 삭제를 진행한다.
+     * R2 삭제 실패 시 예외를 전파하여 DB 삭제를 중단한다.
      */
     public void deleteDream(
             Long userId,
@@ -165,12 +166,11 @@ public class DreamService {
     ) {
         User user = getUser(userId);
 
-        List<String> imageKeys = dreamCommandService.delete(
+        dreamCommandService.delete(
                 dreamId,
                 user.getId()
         );
 
-        dreamImageService.deleteOldImages(imageKeys);
     }
 
     /**

@@ -24,7 +24,7 @@ public class RewardedAdSessionService {
     @Transactional
     public RewardedAdSession create(Long userId) {
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdForUpdate(userId)
                 .filter(User::isSignupCompleted)
                 .orElseThrow(() ->
                         new CustomException(ErrorCode.USER_NOT_FOUND)

@@ -12,6 +12,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 
 import java.time.Duration;
 
@@ -119,6 +120,20 @@ public class ImageStorageService {
                     "Failed to delete image from R2",
                     e
             );
+        }
+    }
+
+    /** Also removes old regeneration objects still under this owned dream's prefix. */
+    public void deleteDreamPrefix(Long dreamId) {
+        var request = ListObjectsV2Request.builder()
+                .bucket(r2Properties.bucketName())
+                .prefix("dreams/" + dreamId + "/")
+                .build();
+
+        for (var page : r2S3Client.listObjectsV2Paginator(request)) {
+            for (var object : page.contents()) {
+                delete(object.key());
+            }
         }
     }
 

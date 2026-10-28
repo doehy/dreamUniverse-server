@@ -160,6 +160,11 @@ public class UserService {
     }
 
 
+    public void lockRegisteredUser(Long userId) {
+        userRepository.findByIdForUpdate(userId).filter(User::isSignupCompleted)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Registered user not found"));
+    }
+
     private void validateTimezone(String timezone) {
 
         if (timezone == null || timezone.isBlank()) {
